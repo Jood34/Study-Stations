@@ -1,0 +1,1098 @@
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Home, BookOpen, RotateCw, CalendarDays, BarChart3, Settings, X, Plus,
+  Trash2, CheckCircle2, Circle, Lock, GraduationCap, Clock, ChevronLeft,
+  Flag, TrainFront, AlertTriangle, Sparkles
+} from "lucide-react";
+
+/* ---------------------------------- utils --------------------------------- */
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const pad = (n) => String(n).padStart(2, "0");
+const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayStr = () => toDateStr(new Date());
+const addDays = (dateStr, n) => {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return toDateStr(d);
+};
+const daysBetween = (a, b) => {
+  const da = new Date(a + "T00:00:00");
+  const db = new Date(b + "T00:00:00");
+  return Math.round((db - da) / 86400000);
+};
+const WEEKDAYS_AR = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const humanDate = (dateStr) => {
+  const d = new Date(dateStr + "T00:00:00");
+  return `${WEEKDAYS_AR[d.getDay()]} ${d.getDate()} ${MONTHS_AR[d.getMonth()]}`;
+};
+const REVIEW_OFFSETS = [1, 3, 7, 14, 30];
+const DEFAULT_TASKS = ["قراءة السلايدات", "فهم المحتوى", "كتابة الملاحظات", "تلخيص Chapter", "حل الأسئلة"];
+
+const STORAGE_KEY = "study-stations-state-v1";
+
+const emptyState = () => ({ subjects: [] });
+
+const newChapter = (name, order) => ({
+  id: uid(),
+  name,
+  order,
+  estMinutes: 90,
+  tasks: DEFAULT_TASKS.map((label) => ({ id: uid(), label, done: false })),
+  completedDate: null,
+  reviews: [],
+});
+
+const newSubject = (name) => ({
+  id: uid(),
+  name,
+  chapters: [newChapter("Chapter 1", 0)],
+  tests: [],
+});
+
+/* derive chapter status: sequential unlocking */
+function chapterStatus(subject, chapter) {
+  if (chapter.completedDate) return "completed";
+  const firstIncomplete = subject.chapters.find((c) => !c.completedDate);
+  if (firstIncomplete && firstIncomplete.id === chapter.id) return "current";
+  return "locked";
+}
+
+function reviewStatus(review) {
+  if (review.completed) return "completed";
+  const t = todayStr();
+  if (review.date === t) return "due";
+  if (review.date < t) return "late";
+  return "upcoming";
+}
+
+const STATUS_COLORS = {
+  completed: { bg: "#6FA287", text: "#fff", label: "مكتملة", dot: "#6FA287" },
+  current: { bg: "#E4A93B", text: "#2B2B26", label: "الحالية", dot: "#E4A93B" },
+  locked: { bg: "#B9B3A4", text: "#fff", label: "مقفلة", dot: "#B9B3A4" },
+  due: { bg: "#E4A93B", text: "#2B2B26", label: "مستحقة اليوم", dot: "#E4A93B" },
+  late: { bg: "#C4593F", text: "#fff", label: "متأخرة", dot: "#C4593F" },
+  upcoming: { bg: "#3E7CA6", text: "#fff", label: "قادمة", dot: "#3E7CA6" },
+};
+
+/* ---------------------------------- app ---------------------------------- */
+
+export default function App() {
+  const [state, setState] = useState(emptyState());
+  const [loaded, setLoaded] = useState(false);
+  const [tab, setTab] = useState("home");
+  const [activeSubjectId, setActiveSubjectId] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+
+  // load
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await window.storage.get(STORAGE_KEY, false);
+        if (res && res.value) {
+          const parsed = JSON.parse(res.value);
+          setState(parsed);
+        }
+      } catch (e) {
+        // no existing data yet — fine
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  // save
+  useEffect(() => {
+    if (!loaded) return;
+    (async () => {
+      try {
+        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+        setSaveError(!result);
+      } catch (e) {
+        setSaveError(true);
+      }
+    })();
+  }, [state, loaded]);
+
+  const updateSubject = useCallback((subjectId, fn) => {
+    setState((prev) => ({
+      ...prev,
+      subjects: prev.subjects.map((s) => (s.id === subjectId ? fn(s) : s)),
+    }));
+  }, []);
+
+  const addSubject = (name) => {
+    const s = newSubject(name);
+    setState((prev) => ({ ...prev, subjects: [...prev.subjects, s] }));
+    setActiveSubjectId(s.id);
+  };
+
+  const deleteSubject = (subjectId) => {
+    setState((prev) => ({ ...prev, subjects: prev.subjects.filter((s) => s.id !== subjectId) }));
+    if (activeSubjectId === subjectId) setActiveSubjectId(null);
+  };
+
+  const addChapter = (subjectId) => {
+    updateSubject(subjectId, (s) => ({
+      ...s,
+      chapters: [...s.chapters, newChapter(`Chapter ${s.chapters.length + 1}`, s.chapters.length)],
+    }));
+  };
+
+  const deleteChapter = (subjectId, chapterId) => {
+    updateSubject(subjectId, (s) => ({ ...s, chapters: s.chapters.filter((c) => c.id !== chapterId) }));
+  };
+
+  const toggleTask = (subjectId, chapterId, taskId) => {
+    updateSubject(subjectId, (s) => ({
+      ...s,
+      chapters: s.chapters.map((c) =>
+        c.id !== chapterId
+          ? c
+          : { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) }
+      ),
+    }));
+  };
+
+  const completeChapter = (subjectId, chapterId) => {
+    const today = todayStr();
+    updateSubject(subjectId, (s) => ({
+      ...s,
+      chapters: s.chapters.map((c) =>
+        c.id !== chapterId
+          ? c
+          : {
+              ...c,
+              completedDate: today,
+              reviews: REVIEW_OFFSETS.map((off) => ({
+                id: uid(),
+                date: addDays(today, off),
+                completed: false,
+              })),
+            }
+      ),
+    }));
+  };
+
+  const toggleReview = (subjectId, chapterId, reviewId) => {
+    updateSubject(subjectId, (s) => ({
+      ...s,
+      chapters: s.chapters.map((c) =>
+        c.id !== chapterId
+          ? c
+          : {
+              ...c,
+              reviews: c.reviews.map((r) => (r.id === reviewId ? { ...r, completed: !r.completed } : r)),
+            }
+      ),
+    }));
+  };
+
+  const addTest = (subjectId, test) => {
+    updateSubject(subjectId, (s) => ({ ...s, tests: [...s.tests, { id: uid(), ...test }] }));
+  };
+
+  const deleteTest = (subjectId, testId) => {
+    updateSubject(subjectId, (s) => ({ ...s, tests: s.tests.filter((t) => t.id !== testId) }));
+  };
+
+  const resetAll = async () => {
+    setState(emptyState());
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify(emptyState()), false);
+    } catch (e) {}
+    setSettingsOpen(false);
+    setActiveSubjectId(null);
+    setTab("home");
+  };
+
+  /* -------- aggregate derived data used across tabs -------- */
+  const allChaptersFlat = useMemo(() => {
+    const list = [];
+    state.subjects.forEach((s) => {
+      s.chapters.forEach((c) => list.push({ subject: s, chapter: c, status: chapterStatus(s, c) }));
+    });
+    return list;
+  }, [state]);
+
+  const allReviewsFlat = useMemo(() => {
+    const list = [];
+    state.subjects.forEach((s) => {
+      s.chapters.forEach((c) => {
+        c.reviews.forEach((r) => list.push({ subject: s, chapter: c, review: r, status: reviewStatus(r) }));
+      });
+    });
+    return list;
+  }, [state]);
+
+  const allTestsFlat = useMemo(() => {
+    const list = [];
+    state.subjects.forEach((s) => s.tests.forEach((t) => list.push({ subject: s, test: t })));
+    return list.sort((a, b) => a.test.date.localeCompare(b.test.date));
+  }, [state]);
+
+  if (!loaded) {
+    return (
+      <div style={{ fontFamily: "Tajawal, sans-serif" }} className="h-screen w-full flex items-center justify-center bg-[#F6F3EC]">
+        <div className="flex flex-col items-center gap-3 text-[#1F5C54]">
+          <TrainFront className="animate-pulse" size={36} />
+          <span className="text-sm">جارِ تحميل محطاتك…</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div dir="rtl" lang="ar" className="h-screen w-full flex flex-col bg-[#F6F3EC] text-[#23342F]" style={{ fontFamily: "Tajawal, sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap');
+        .font-display { font-family: 'Cairo', sans-serif; }
+        * { scrollbar-width: thin; scrollbar-color: #B9B3A4 transparent; }
+        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(228,169,59,0.45); } 100% { box-shadow: 0 0 0 10px rgba(228,169,59,0); } }
+        .pulse-current { animation: pulseRing 1.8s ease-out infinite; }
+      `}</style>
+
+      <Header
+        onOpenSettings={() => setSettingsOpen(true)}
+        saveError={saveError}
+      />
+
+      <main className="flex-1 overflow-y-auto pb-24">
+        {tab === "home" && (
+          <HomeTab
+            state={state}
+            allChaptersFlat={allChaptersFlat}
+            allReviewsFlat={allReviewsFlat}
+            allTestsFlat={allTestsFlat}
+            goToSubject={(id) => { setActiveSubjectId(id); setTab("subjects"); }}
+            goTo={setTab}
+          />
+        )}
+        {tab === "subjects" && (
+          <SubjectsTab
+            state={state}
+            activeSubjectId={activeSubjectId}
+            setActiveSubjectId={setActiveSubjectId}
+            addSubject={addSubject}
+            deleteSubject={deleteSubject}
+            addChapter={addChapter}
+            deleteChapter={deleteChapter}
+            toggleTask={toggleTask}
+            completeChapter={completeChapter}
+          />
+        )}
+        {tab === "reviews" && (
+          <ReviewsTab allReviewsFlat={allReviewsFlat} toggleReview={toggleReview} />
+        )}
+        {tab === "plan" && (
+          <PlanTab
+            state={state}
+            allTestsFlat={allTestsFlat}
+            addTest={addTest}
+            deleteTest={deleteTest}
+            allReviewsFlat={allReviewsFlat}
+          />
+        )}
+        {tab === "stats" && <StatsTab state={state} allChaptersFlat={allChaptersFlat} allReviewsFlat={allReviewsFlat} />}
+      </main>
+
+      <BottomNav tab={tab} setTab={setTab} />
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onReset={resetAll} />}
+    </div>
+  );
+}
+
+/* -------------------------------- header -------------------------------- */
+
+function Header({ onOpenSettings, saveError }) {
+  return (
+    <header className="flex items-center justify-between px-4 py-3 bg-[#1F5C54] text-white shrink-0">
+      <div className="flex items-center gap-2">
+        <div className="bg-white/15 rounded-full p-1.5">
+          <TrainFront size={20} />
+        </div>
+        <div>
+          <h1 className="font-display font-extrabold text-base leading-none">Study Stations</h1>
+          <p className="text-[11px] text-white/70 leading-none mt-1">رحلتك من الفصل إلى الاختبار</p>
+        </div>
+      </div>
+      <button onClick={onOpenSettings} className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition" aria-label="الإعدادات">
+        <Settings size={20} />
+      </button>
+      {saveError && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-[#C4593F] text-white text-xs px-3 py-1 rounded-full shadow">
+          تعذّر الحفظ التلقائي
+        </div>
+      )}
+    </header>
+  );
+}
+
+/* -------------------------------- bottom nav -------------------------------- */
+
+function BottomNav({ tab, setTab }) {
+  const items = [
+    { id: "home", label: "الرئيسية", icon: Home },
+    { id: "subjects", label: "المواد", icon: BookOpen },
+    { id: "reviews", label: "المراجعات", icon: RotateCw },
+    { id: "plan", label: "الخطة", icon: CalendarDays },
+    { id: "stats", label: "الإحصائيات", icon: BarChart3 },
+  ];
+  return (
+    <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-[#E9E4D8] flex justify-around items-stretch shadow-[0_-2px_10px_rgba(0,0,0,0.04)]" style={{ maxWidth: 640, margin: "0 auto" }}>
+      {items.map((it) => {
+        const Icon = it.icon;
+        const active = tab === it.id;
+        return (
+          <button
+            key={it.id}
+            onClick={() => setTab(it.id)}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2.5 transition"
+          >
+            <Icon size={20} color={active ? "#1F5C54" : "#B9B3A4"} strokeWidth={active ? 2.5 : 2} />
+            <span className={`text-[10px] ${active ? "text-[#1F5C54] font-bold" : "text-[#B9B3A4]"}`}>{it.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* -------------------------------- card shell -------------------------------- */
+
+function Card({ children, className = "" }) {
+  return <div className={`bg-white rounded-3xl shadow-sm p-4 ${className}`}>{children}</div>;
+}
+
+function SectionTitle({ children, icon: Icon }) {
+  return (
+    <div className="flex items-center gap-2 mb-3 px-1">
+      {Icon && <Icon size={17} className="text-[#1F5C54]" />}
+      <h2 className="font-display font-bold text-[15px] text-[#23342F]">{children}</h2>
+    </div>
+  );
+}
+
+function EmptyState({ text, sub }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-10 text-[#B9B3A4]">
+      <TrainFront size={30} className="mb-2" />
+      <p className="text-sm font-medium text-[#8b8677]">{text}</p>
+      {sub && <p className="text-xs mt-1 max-w-[220px]">{sub}</p>}
+    </div>
+  );
+}
+
+/* -------------------------------- HOME TAB -------------------------------- */
+
+function HomeTab({ state, allChaptersFlat, allReviewsFlat, allTestsFlat, goToSubject, goTo }) {
+  const currentStations = allChaptersFlat.filter((x) => x.status === "current");
+  const todayReviews = allReviewsFlat.filter((x) => x.status === "due");
+  const totalChapters = allChaptersFlat.length;
+  const completedChapters = allChaptersFlat.filter((x) => x.status === "completed").length;
+  const pct = totalChapters ? Math.round((completedChapters / totalChapters) * 100) : 0;
+  const studyHours = Math.round(
+    (allChaptersFlat.filter((x) => x.status === "completed").reduce((sum, x) => sum + (x.chapter.estMinutes || 90), 0) / 60) * 10
+  ) / 10;
+
+  const nearestTest = allTestsFlat.filter((x) => x.test.date >= todayStr()).sort((a, b) => a.test.date.localeCompare(b.test.date))[0];
+  const daysLeft = nearestTest ? daysBetween(todayStr(), nearestTest.test.date) : null;
+
+  if (state.subjects.length === 0) {
+    return (
+      <div className="px-4 pt-6">
+        <Card>
+          <EmptyState text="لا توجد مواد بعد" sub="أضف أول مادة من تبويب «المواد» لتبدأ رحلتك بين المحطات." />
+          <button onClick={() => goTo("subjects")} className="w-full mt-2 bg-[#1F5C54] text-white rounded-2xl py-2.5 text-sm font-bold">
+            إضافة مادة
+          </button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 pt-4 flex flex-col gap-4">
+      {/* progress ring card */}
+      <Card className="bg-[#1F5C54] text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-white/70">التقدم العام</p>
+            <p className="font-display font-extrabold text-3xl">{pct}%</p>
+            <p className="text-xs text-white/70 mt-1">{completedChapters} / {totalChapters} محطة مكتملة</p>
+          </div>
+          <RingProgress pct={pct} />
+        </div>
+        <div className="flex gap-3 mt-4 text-center">
+          <div className="flex-1 bg-white/10 rounded-2xl py-2">
+            <p className="font-display font-bold text-lg">{totalChapters - completedChapters}</p>
+            <p className="text-[10px] text-white/70">محطات متبقية</p>
+          </div>
+          <div className="flex-1 bg-white/10 rounded-2xl py-2">
+            <p className="font-display font-bold text-lg">{studyHours}</p>
+            <p className="text-[10px] text-white/70">ساعات مذاكرة</p>
+          </div>
+          <div className="flex-1 bg-white/10 rounded-2xl py-2">
+            <p className="font-display font-bold text-lg">{daysLeft !== null ? daysLeft : "—"}</p>
+            <p className="text-[10px] text-white/70">أيام للاختبار</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* station of the day */}
+      <div>
+        <SectionTitle icon={TrainFront}>محطة اليوم</SectionTitle>
+        {currentStations.length === 0 ? (
+          <Card><EmptyState text="لا توجد محطة نشطة الآن" /></Card>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {currentStations.map(({ subject, chapter }) => {
+              const doneTasks = chapter.tasks.filter((t) => t.done).length;
+              return (
+                <Card key={chapter.id} className="cursor-pointer" >
+                  <button className="w-full text-right" onClick={() => goToSubject(subject.id)}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] text-[#8b8677]">{subject.name}</p>
+                        <p className="font-display font-bold text-[15px]">{chapter.name}</p>
+                      </div>
+                      <div className="pulse-current rounded-full p-2" style={{ background: "#E4A93B22" }}>
+                        <TrainFront size={18} color="#E4A93B" />
+                      </div>
+                    </div>
+                    <div className="mt-2 h-1.5 bg-[#F1EEE4] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#E4A93B] rounded-full" style={{ width: `${Math.round((doneTasks / chapter.tasks.length) * 100)}%` }} />
+                    </div>
+                    <p className="text-[11px] text-[#8b8677] mt-1">{doneTasks} / {chapter.tasks.length} مهام منجزة</p>
+                  </button>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* reviews due today */}
+      <div>
+        <SectionTitle icon={RotateCw}>المراجعات المستحقة اليوم</SectionTitle>
+        {todayReviews.length === 0 ? (
+          <Card><p className="text-sm text-[#8b8677] text-center py-2">لا توجد مراجعات مستحقة اليوم 🎉</p></Card>
+        ) : (
+          <Card className="flex flex-col gap-2">
+            {todayReviews.map(({ subject, chapter, review }) => (
+              <div key={review.id} className="flex items-center justify-between border-b border-[#F1EEE4] last:border-0 pb-2 last:pb-0">
+                <div>
+                  <p className="text-[11px] text-[#8b8677]">{subject.name}</p>
+                  <p className="text-sm font-bold">{chapter.name}</p>
+                </div>
+                <StatusPill status="due" />
+              </div>
+            ))}
+          </Card>
+        )}
+      </div>
+
+      {nearestTest && (
+        <div>
+          <SectionTitle icon={Flag}>أقرب اختبار</SectionTitle>
+          <Card className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-[#8b8677]">{nearestTest.subject.name}</p>
+              <p className="font-display font-bold text-sm">{nearestTest.test.name}</p>
+              <p className="text-[11px] text-[#8b8677] mt-0.5">{humanDate(nearestTest.test.date)}</p>
+            </div>
+            <div className="text-center bg-[#F6F3EC] rounded-2xl px-3 py-2">
+              <p className="font-display font-extrabold text-xl text-[#C4593F]">{daysLeft}</p>
+              <p className="text-[10px] text-[#8b8677]">يوم</p>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RingProgress({ pct }) {
+  const r = 26, c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <svg width="66" height="66" viewBox="0 0 66 66">
+      <circle cx="33" cy="33" r={r} stroke="#ffffff33" strokeWidth="7" fill="none" />
+      <circle
+        cx="33" cy="33" r={r} stroke="#E4A93B" strokeWidth="7" fill="none"
+        strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+        transform="rotate(-90 33 33)"
+      />
+    </svg>
+  );
+}
+
+function StatusPill({ status }) {
+  const s = STATUS_COLORS[status];
+  return (
+    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
+
+/* -------------------------------- SUBJECTS TAB -------------------------------- */
+
+function SubjectsTab(props) {
+  const { state, activeSubjectId, setActiveSubjectId, addSubject, deleteSubject, addChapter, deleteChapter, toggleTask, completeChapter } = props;
+  const [showAdd, setShowAdd] = useState(false);
+  const [name, setName] = useState("");
+
+  const activeSubject = state.subjects.find((s) => s.id === activeSubjectId);
+
+  if (activeSubject) {
+    return (
+      <SubjectDetail
+        subject={activeSubject}
+        onBack={() => setActiveSubjectId(null)}
+        onDeleteSubject={() => deleteSubject(activeSubject.id)}
+        addChapter={() => addChapter(activeSubject.id)}
+        deleteChapter={(cid) => deleteChapter(activeSubject.id, cid)}
+        toggleTask={(cid, tid) => toggleTask(activeSubject.id, cid, tid)}
+        completeChapter={(cid) => completeChapter(activeSubject.id, cid)}
+      />
+    );
+  }
+
+  return (
+    <div className="px-4 pt-4">
+      <SectionTitle icon={BookOpen}>موادّي</SectionTitle>
+      {state.subjects.length === 0 && <Card><EmptyState text="لم تضف أي مادة بعد" sub="ابدأ بإضافة أول مادة دراسية." /></Card>}
+      <div className="flex flex-col gap-2">
+        {state.subjects.map((s) => {
+          const done = s.chapters.filter((c) => chapterStatus(s, c) === "completed").length;
+          const total = s.chapters.length;
+          const pct = total ? Math.round((done / total) * 100) : 0;
+          return (
+            <Card key={s.id} className="p-0 overflow-hidden">
+              <button className="w-full text-right p-4" onClick={() => setActiveSubjectId(s.id)}>
+                <div className="flex items-center justify-between">
+                  <p className="font-display font-bold text-[15px]">{s.name}</p>
+                  <ChevronLeft size={18} className="text-[#B9B3A4]" />
+                </div>
+                <div className="mt-2 h-1.5 bg-[#F1EEE4] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#1F5C54] rounded-full" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-[11px] text-[#8b8677] mt-1">{done} / {total} محطة · {pct}%</p>
+              </button>
+            </Card>
+          );
+        })}
+      </div>
+
+      <button onClick={() => setShowAdd(true)} className="w-full mt-3 border-2 border-dashed border-[#1F5C54]/30 text-[#1F5C54] rounded-2xl py-3 text-sm font-bold flex items-center justify-center gap-1.5">
+        <Plus size={16} /> إضافة مادة جديدة
+      </button>
+
+      {showAdd && (
+        <Modal onClose={() => setShowAdd(false)} title="مادة جديدة">
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="مثال: Pharmacology"
+            className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#1F5C54]"
+          />
+          <button
+            disabled={!name.trim()}
+            onClick={() => { addSubject(name.trim()); setName(""); setShowAdd(false); }}
+            className="w-full mt-3 bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2.5 text-sm font-bold"
+          >
+            إضافة
+          </button>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function SubjectDetail({ subject, onBack, onDeleteSubject, addChapter, deleteChapter, toggleTask, completeChapter }) {
+  const [openChapterId, setOpenChapterId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  return (
+    <div className="px-4 pt-4">
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={onBack} className="flex items-center gap-1 text-[#1F5C54] text-sm font-bold">
+          <ChevronLeft size={16} className="rotate-180" /> رجوع
+        </button>
+        <button onClick={() => setConfirmDelete(true)} className="text-[#C4593F]">
+          <Trash2 size={17} />
+        </button>
+      </div>
+      <h2 className="font-display font-extrabold text-lg mb-4">{subject.name}</h2>
+
+      {/* metro line */}
+      <div className="relative pr-5">
+        <div className="absolute right-[9px] top-2 bottom-2 w-[3px] bg-[#E9E4D8] rounded-full" />
+        <div className="flex flex-col gap-1">
+          {subject.chapters.map((c) => {
+            const status = chapterStatus(subject, c);
+            const colors = STATUS_COLORS[status];
+            const isOpen = openChapterId === c.id;
+            const doneTasks = c.tasks.filter((t) => t.done).length;
+            return (
+              <div key={c.id} className="relative pb-3">
+                <div
+                  className={`absolute right-0 top-1 w-5 h-5 rounded-full flex items-center justify-center ${status === "current" ? "pulse-current" : ""}`}
+                  style={{ background: colors.bg }}
+                >
+                  {status === "completed" && <CheckCircle2 size={13} color="#fff" />}
+                  {status === "locked" && <Lock size={10} color="#fff" />}
+                </div>
+                <button
+                  onClick={() => status !== "locked" && setOpenChapterId(isOpen ? null : c.id)}
+                  className="w-full text-right mr-8 bg-white rounded-2xl p-3 shadow-sm disabled:opacity-60"
+                  disabled={status === "locked"}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-display font-bold text-sm">{c.name}</p>
+                    <StatusPill status={status} />
+                  </div>
+                  {status !== "locked" && (
+                    <div className="mt-2 h-1.5 bg-[#F1EEE4] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.round((doneTasks / c.tasks.length) * 100)}%`, background: colors.bg }} />
+                    </div>
+                  )}
+                  {status === "locked" && <p className="text-[11px] text-[#B9B3A4] mt-1">أكمل المحطة السابقة أولًا</p>}
+                </button>
+
+                {isOpen && status !== "locked" && (
+                  <div className="mr-8 mt-2 bg-[#F6F3EC] rounded-2xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11px] text-[#8b8677] flex items-center gap-1"><Clock size={12} /> {c.estMinutes} دقيقة متوقعة</p>
+                      <button onClick={() => deleteChapter(c.id)} className="text-[#C4593F]"><Trash2 size={14} /></button>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      {c.tasks.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => toggleTask(c.id, t.id)}
+                          disabled={status === "completed"}
+                          className="flex items-center gap-2 text-right text-sm py-1"
+                        >
+                          {t.done ? <CheckCircle2 size={17} className="text-[#6FA287] shrink-0" /> : <Circle size={17} className="text-[#B9B3A4] shrink-0" />}
+                          <span className={t.done ? "line-through text-[#B9B3A4]" : ""}>{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {status === "current" && (
+                      <button
+                        onClick={() => completeChapter(c.id)}
+                        disabled={doneTasks < c.tasks.length}
+                        className="w-full mt-3 bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2 text-sm font-bold flex items-center justify-center gap-1.5"
+                      >
+                        <TrainFront size={15} /> إكمال المحطة
+                      </button>
+                    )}
+                    {status === "completed" && (
+                      <p className="text-[11px] text-[#6FA287] mt-2 font-bold">اكتملت بتاريخ {humanDate(c.completedDate)}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <button onClick={addChapter} className="w-full mt-1 border-2 border-dashed border-[#1F5C54]/30 text-[#1F5C54] rounded-2xl py-2.5 text-sm font-bold flex items-center justify-center gap-1.5">
+        <Plus size={16} /> إضافة محطة (Chapter)
+      </button>
+
+      {confirmDelete && (
+        <Modal onClose={() => setConfirmDelete(false)} title="حذف المادة">
+          <p className="text-sm text-[#8b8677] mb-3">سيتم حذف "{subject.name}" وكل محطاتها ومراجعاتها. هل أنت متأكد؟</p>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirmDelete(false)} className="flex-1 bg-[#F1EEE4] rounded-xl py-2.5 text-sm font-bold">إلغاء</button>
+            <button onClick={onDeleteSubject} className="flex-1 bg-[#C4593F] text-white rounded-xl py-2.5 text-sm font-bold">حذف</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------- REVIEWS TAB -------------------------------- */
+
+function ReviewsTab({ allReviewsFlat, toggleReview }) {
+  const due = allReviewsFlat.filter((x) => x.status === "due");
+  const late = allReviewsFlat.filter((x) => x.status === "late");
+  const upcoming = allReviewsFlat.filter((x) => x.status === "upcoming").sort((a, b) => a.review.date.localeCompare(b.review.date)).slice(0, 12);
+  const completed = allReviewsFlat.filter((x) => x.status === "completed");
+
+  const Row = ({ item, showDate }) => (
+    <div className="flex items-center justify-between border-b border-[#F1EEE4] last:border-0 py-2.5">
+      <button
+        className="flex items-center gap-2 text-right flex-1"
+        onClick={() => toggleReview(item.subject.id, item.chapter.id, item.review.id)}
+      >
+        {item.status === "completed" ? (
+          <CheckCircle2 size={18} className="text-[#6FA287] shrink-0" />
+        ) : (
+          <Circle size={18} className="text-[#B9B3A4] shrink-0" />
+        )}
+        <span>
+          <p className={`text-sm font-bold ${item.status === "completed" ? "line-through text-[#B9B3A4]" : ""}`}>{item.chapter.name}</p>
+          <p className="text-[11px] text-[#8b8677]">{item.subject.name}{showDate ? ` · ${humanDate(item.review.date)}` : ""}</p>
+        </span>
+      </button>
+      <StatusPill status={item.status} />
+    </div>
+  );
+
+  return (
+    <div className="px-4 pt-4 flex flex-col gap-4">
+      {late.length > 0 && (
+        <div>
+          <SectionTitle icon={AlertTriangle}>مراجعات متأخرة</SectionTitle>
+          <Card>{late.map((x) => <Row key={x.review.id} item={x} showDate />)}</Card>
+        </div>
+      )}
+
+      <div>
+        <SectionTitle icon={RotateCw}>مراجعات اليوم</SectionTitle>
+        {due.length === 0 ? (
+          <Card><p className="text-sm text-[#8b8677] text-center py-2">لا توجد مراجعات مستحقة اليوم 🎉</p></Card>
+        ) : (
+          <Card>{due.map((x) => <Row key={x.review.id} item={x} />)}</Card>
+        )}
+      </div>
+
+      <div>
+        <SectionTitle icon={CalendarDays}>المراجعات القادمة</SectionTitle>
+        {upcoming.length === 0 ? (
+          <Card><EmptyState text="لا توجد مراجعات قادمة بعد" /></Card>
+        ) : (
+          <Card>{upcoming.map((x) => <Row key={x.review.id} item={x} showDate />)}</Card>
+        )}
+      </div>
+
+      {completed.length > 0 && (
+        <p className="text-center text-[11px] text-[#B9B3A4]">{completed.length} مراجعة مكتملة إجمالًا</p>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------- PLAN TAB (tests + calendar + smart distribution) -------------------------------- */
+
+function PlanTab({ state, allTestsFlat, addTest, deleteTest, allReviewsFlat }) {
+  const [showAddTest, setShowAddTest] = useState(false);
+  const [showSmart, setShowSmart] = useState(false);
+
+  // agenda: merge upcoming reviews + tests over next 21 days
+  const horizon = 21;
+  const agendaMap = {};
+  allReviewsFlat.forEach((x) => {
+    if (x.status === "completed") return;
+    const diff = daysBetween(todayStr(), x.review.date);
+    if (diff >= 0 && diff <= horizon) {
+      agendaMap[x.review.date] = agendaMap[x.review.date] || [];
+      agendaMap[x.review.date].push({ type: "review", label: `${x.chapter.name} — ${x.subject.name}`, status: x.status });
+    }
+  });
+  allTestsFlat.forEach((x) => {
+    const diff = daysBetween(todayStr(), x.test.date);
+    if (diff >= 0 && diff <= horizon) {
+      agendaMap[x.test.date] = agendaMap[x.test.date] || [];
+      agendaMap[x.test.date].push({ type: "test", label: `${x.test.name} — ${x.subject.name}`, status: "test" });
+    }
+  });
+  const agendaDates = Object.keys(agendaMap).sort();
+
+  return (
+    <div className="px-4 pt-4 flex flex-col gap-4">
+      <div>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <Flag size={17} className="text-[#1F5C54]" />
+            <h2 className="font-display font-bold text-[15px]">الاختبارات</h2>
+          </div>
+          <button onClick={() => setShowAddTest(true)} disabled={state.subjects.length === 0} className="text-[#1F5C54] disabled:text-[#B9B3A4]">
+            <Plus size={19} />
+          </button>
+        </div>
+        {allTestsFlat.length === 0 ? (
+          <Card><EmptyState text="لا توجد اختبارات مضافة" sub={state.subjects.length === 0 ? "أضف مادة أولًا." : "اضغط + لإضافة اختبار."} /></Card>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {allTestsFlat.map(({ subject, test }) => {
+              const dLeft = daysBetween(todayStr(), test.date);
+              return (
+                <Card key={test.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] text-[#8b8677]">{subject.name} · {test.chapterRange || "—"}</p>
+                    <p className="font-display font-bold text-sm">{test.name}</p>
+                    <p className="text-[11px] text-[#8b8677] mt-0.5">{humanDate(test.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-center bg-[#F6F3EC] rounded-xl px-2.5 py-1.5">
+                      <p className="font-display font-extrabold text-sm text-[#C4593F]">{dLeft >= 0 ? dLeft : "—"}</p>
+                      <p className="text-[9px] text-[#8b8677]">يوم</p>
+                    </div>
+                    <button onClick={() => deleteTest(subject.id, test.id)} className="text-[#C4593F]"><Trash2 size={15} /></button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <Sparkles size={17} className="text-[#1F5C54]" />
+            <h2 className="font-display font-bold text-[15px]">المخطط الذكي</h2>
+          </div>
+        </div>
+        <Card>
+          <p className="text-xs text-[#8b8677] mb-3">وزّع المحطات المتبقية تلقائيًا على الأيام المتاحة قبل موعد اختبار.</p>
+          <button
+            onClick={() => setShowSmart(true)}
+            disabled={allTestsFlat.length === 0}
+            className="w-full bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2.5 text-sm font-bold"
+          >
+            إنشاء خطة توزيع
+          </button>
+        </Card>
+      </div>
+
+      <div>
+        <SectionTitle icon={CalendarDays}>التقويم — الأيام القادمة</SectionTitle>
+        {agendaDates.length === 0 ? (
+          <Card><EmptyState text="لا توجد أحداث خلال الأسابيع القادمة" /></Card>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {agendaDates.map((date) => (
+              <Card key={date}>
+                <p className="text-xs font-bold text-[#1F5C54] mb-2">{humanDate(date)}</p>
+                <div className="flex flex-col gap-1.5">
+                  {agendaMap[date].map((ev, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ev.type === "test" ? "#C4593F" : STATUS_COLORS[ev.status].dot }} />
+                      <span>{ev.type === "test" ? "🔴 " : "🔄 "}{ev.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showAddTest && <AddTestModal subjects={state.subjects} onClose={() => setShowAddTest(false)} onAdd={addTest} />}
+      {showSmart && <SmartPlanModal state={state} allTestsFlat={allTestsFlat} onClose={() => setShowSmart(false)} />}
+    </div>
+  );
+}
+
+function AddTestModal({ subjects, onClose, onAdd }) {
+  const [subjectId, setSubjectId] = useState(subjects[0]?.id || "");
+  const [name, setName] = useState("");
+  const [date, setDate] = useState(todayStr());
+  const [range, setRange] = useState("");
+
+  return (
+    <Modal onClose={onClose} title="اختبار جديد">
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="text-xs text-[#8b8677]">المادة</label>
+          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1">
+            {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-[#8b8677]">اسم الاختبار</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: Pharmacology Quiz 1" className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs text-[#8b8677]">التاريخ</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1" />
+        </div>
+        <div>
+          <label className="text-xs text-[#8b8677]">النطاق (اختياري)</label>
+          <input value={range} onChange={(e) => setRange(e.target.value)} placeholder="مثال: Chapter 1 - 5" className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1" />
+        </div>
+        <button
+          disabled={!name.trim() || !subjectId}
+          onClick={() => { onAdd(subjectId, { name: name.trim(), date, chapterRange: range.trim() }); onClose(); }}
+          className="w-full bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2.5 text-sm font-bold mt-1"
+        >
+          إضافة الاختبار
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function SmartPlanModal({ state, allTestsFlat, onClose }) {
+  const [testKey, setTestKey] = useState(allTestsFlat[0] ? `${allTestsFlat[0].subject.id}:${allTestsFlat[0].test.id}` : "");
+  const selected = allTestsFlat.find((x) => `${x.subject.id}:${x.test.id}` === testKey);
+
+  let plan = [];
+  if (selected) {
+    const subject = selected.subject;
+    const remaining = subject.chapters.filter((c) => chapterStatus(subject, c) !== "completed");
+    const days = Math.max(daysBetween(todayStr(), selected.test.date), 1);
+    remaining.forEach((c, i) => {
+      const dayIndex = remaining.length > 1 ? Math.round((i * (days - 1)) / (remaining.length - 1)) : 0;
+      const date = addDays(todayStr(), Math.min(dayIndex, days - 1));
+      plan.push({ date, chapter: c });
+    });
+  }
+  const grouped = {};
+  plan.forEach((p) => { grouped[p.date] = grouped[p.date] || []; grouped[p.date].push(p.chapter); });
+  const dates = Object.keys(grouped).sort();
+
+  return (
+    <Modal onClose={onClose} title="خطة توزيع ذكية">
+      <label className="text-xs text-[#8b8677]">اختر الاختبار</label>
+      <select value={testKey} onChange={(e) => setTestKey(e.target.value)} className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1 mb-3">
+        {allTestsFlat.map((x) => (
+          <option key={`${x.subject.id}:${x.test.id}`} value={`${x.subject.id}:${x.test.id}`}>
+            {x.test.name} ({x.subject.name})
+          </option>
+        ))}
+      </select>
+
+      {selected && dates.length === 0 && (
+        <p className="text-sm text-[#6FA287] text-center py-4 font-bold">كل المحطات مكتملة لهذه المادة 🎉</p>
+      )}
+      {selected && dates.length > 0 && (
+        <div className="max-h-[45vh] overflow-y-auto flex flex-col gap-2">
+          {dates.map((date) => (
+            <div key={date} className="bg-[#F6F3EC] rounded-xl p-2.5">
+              <p className="text-xs font-bold text-[#1F5C54] mb-1">{humanDate(date)}</p>
+              {grouped[date].map((c) => (
+                <p key={c.id} className="text-sm flex items-center gap-1.5"><TrainFront size={13} /> {c.name}</p>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/* -------------------------------- STATS TAB -------------------------------- */
+
+function StatsTab({ state, allChaptersFlat, allReviewsFlat }) {
+  const totalChapters = allChaptersFlat.length;
+  const completedChapters = allChaptersFlat.filter((x) => x.status === "completed").length;
+  const pct = totalChapters ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
+  const totalReviews = allReviewsFlat.length;
+  const completedReviews = allReviewsFlat.filter((x) => x.status === "completed").length;
+  const upcomingReviews = allReviewsFlat.filter((x) => x.status === "upcoming" || x.status === "due").length;
+  const lateReviews = allReviewsFlat.filter((x) => x.status === "late").length;
+
+  const studyHours = Math.round(
+    (allChaptersFlat.filter((x) => x.status === "completed").reduce((sum, x) => sum + (x.chapter.estMinutes || 90), 0) / 60) * 10
+  ) / 10;
+
+  if (state.subjects.length === 0) {
+    return <div className="px-4 pt-6"><Card><EmptyState text="لا توجد إحصائيات بعد" sub="أضف مواد وأكمل محطات لترى تقدمك هنا." /></Card></div>;
+  }
+
+  return (
+    <div className="px-4 pt-4 flex flex-col gap-4">
+      <Card className="bg-[#1F5C54] text-white text-center py-6">
+        <p className="text-xs text-white/70 mb-1">التقدم العام</p>
+        <p className="font-display font-extrabold text-4xl">{pct}%</p>
+        <p className="text-xs text-white/70 mt-2">{completedChapters} / {totalChapters} محطة · {studyHours} ساعة مذاكرة</p>
+      </Card>
+
+      <div className="grid grid-cols-3 gap-2">
+        <StatBox label="مراجعات مكتملة" value={completedReviews} color="#6FA287" />
+        <StatBox label="مراجعات قادمة" value={upcomingReviews} color="#3E7CA6" />
+        <StatBox label="مراجعات متأخرة" value={lateReviews} color="#C4593F" />
+      </div>
+
+      <div>
+        <SectionTitle icon={BarChart3}>الإنجاز لكل مادة</SectionTitle>
+        <div className="flex flex-col gap-2">
+          {state.subjects.map((s) => {
+            const done = s.chapters.filter((c) => chapterStatus(s, c) === "completed").length;
+            const total = s.chapters.length;
+            const p = total ? Math.round((done / total) * 100) : 0;
+            return (
+              <Card key={s.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-sm font-bold">{s.name}</p>
+                  <p className="text-xs text-[#8b8677]">{done}/{total}</p>
+                </div>
+                <div className="h-2 bg-[#F1EEE4] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#1F5C54] rounded-full" style={{ width: `${p}%` }} />
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="text-center text-[11px] text-[#B9B3A4]">إجمالي المراجعات: {completedReviews} / {totalReviews}</p>
+    </div>
+  );
+}
+
+function StatBox({ label, value, color }) {
+  return (
+    <Card className="text-center py-3">
+      <p className="font-display font-extrabold text-xl" style={{ color }}>{value}</p>
+      <p className="text-[10px] text-[#8b8677] mt-0.5">{label}</p>
+    </Card>
+  );
+}
+
+/* -------------------------------- shared modal -------------------------------- */
+
+function Modal({ children, onClose, title }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:w-[400px] p-5 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display font-bold text-base">{title}</h3>
+          <button onClick={onClose}><X size={19} className="text-[#B9B3A4]" /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SettingsModal({ onClose, onReset }) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <Modal onClose={onClose} title="الإعدادات">
+      <div className="flex flex-col gap-3">
+        <div className="bg-[#F6F3EC] rounded-xl p-3">
+          <p className="text-xs text-[#8b8677]">جميع بياناتك (المواد، المحطات، المراجعات، الاختبارات) محفوظة تلقائيًا على هذا الجهاز والمتصفح.</p>
+        </div>
+        {!confirming ? (
+          <button onClick={() => setConfirming(true)} className="w-full flex items-center justify-center gap-1.5 border border-[#C4593F] text-[#C4593F] rounded-xl py-2.5 text-sm font-bold">
+            <Trash2 size={15} /> إعادة تعيين جميع البيانات
+          </button>
+        ) : (
+          <div className="border border-[#C4593F]/30 rounded-xl p-3">
+            <p className="text-xs text-[#C4593F] font-bold mb-2">سيتم حذف كل شيء نهائيًا. هل أنت متأكد؟</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirming(false)} className="flex-1 bg-[#F1EEE4] rounded-lg py-2 text-xs font-bold">إلغاء</button>
+              <button onClick={onReset} className="flex-1 bg-[#C4593F] text-white rounded-lg py-2 text-xs font-bold">تأكيد الحذف</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
