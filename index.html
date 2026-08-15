@@ -1,1098 +1,1123 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Home, BookOpen, RotateCw, CalendarDays, BarChart3, Settings, X, Plus,
-  Trash2, CheckCircle2, Circle, Lock, GraduationCap, Clock, ChevronLeft,
-  Flag, TrainFront, AlertTriangle, Sparkles
-} from "lucide-react";
+<!DOCTYPE html>
+<html dir="rtl" lang="ar" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Study Stations 🚉</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EFE9D8; --card:#FBF7EC; --border:#E4DCC6; --track:#ECE5D2;
+    --text:#23342F; --muted:#8b8677; --muted-icon:#B9B3A4;
+    --primary:#1F5C54; --gold:#E4A93B; --green:#6FA287; --red:#C4593F;
+    --blue:#4F86B0; --purple:#9B7FC7; --rose:#D8607A; --yellow:#E3C23C; --gray-light:#B7BDC6;
+    --zebra:#00000008;
+  }
+  [data-theme="dark"]{
+    --bg:#181F1D; --card:#212B27; --border:#354039; --track:#26312C;
+    --text:#EAE6D9; --muted:#A6A08E; --muted-icon:#6E7871; --zebra:#ffffff08;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;}
+  .font-d{font-family:'Cairo',sans-serif;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--muted-icon);border-radius:3px;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  input,select,textarea{font-family:inherit;color:var(--text);}
+  input[type=color]{padding:0;border:1px solid var(--border);border-radius:10px;width:44px;height:38px;background:var(--card);}
+  input[type=date],input[type=time]{color-scheme: light;}
+  [data-theme="dark"] input[type=date],[data-theme="dark"] input[type=time]{color-scheme: dark;}
 
-/* ---------------------------------- utils --------------------------------- */
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:210px;flex-shrink:0;background:var(--card);border-left:1px solid var(--border);
+    display:flex;flex-direction:column;padding:14px 10px;position:fixed;top:0;right:0;height:100vh;overflow-y:auto;
+    transform:translateX(100%);transition:transform .25s ease;z-index:41;}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-backdrop{position:fixed;inset:0;background:#00000055;z-index:40;}
+  .hamburger{font-size:19px;padding:4px;border-radius:8px;}
+  .hamburger:hover{background:var(--track);}
+  @media(min-width:900px){
+    .sidebar{position:sticky;transform:none !important;}
+    .shell{padding-right:0;}
+  }
+  @media(max-width:899px){ .shell{padding-right:0;} }
+  .side-logo{display:flex;align-items:center;gap:8px;padding:6px 8px 16px;}
+  .side-logo .box{background:var(--primary);color:#fff;border-radius:12px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .side-logo b{font-size:14px;}
+  .side-logo span{display:block;font-size:10px;color:var(--muted);}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:10px 10px;border-radius:12px;font-size:13px;font-weight:700;margin-bottom:3px;transition:.15s;color:var(--muted);text-align:right;width:100%;}
+  .nav-item.active{background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary);}
+  .nav-item:hover{background:var(--track);}
+  .nav-item .ic{font-size:17px;width:20px;text-align:center;flex-shrink:0;}
+  .side-bottom{margin-top:auto;display:flex;flex-direction:column;gap:4px;}
 
-const uid = () => Math.random().toString(36).slice(2, 10);
-const pad = (n) => String(n).padStart(2, "0");
-const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  .content{flex:1;min-width:0;padding-bottom:40px;}
+  .topbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .topbar h1{font-size:16px;margin:0;}
+  .main{padding:16px 18px;max-width:1000px;}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:16px;}
+  .card.hl{border-color:var(--gold);}
+  .grid{display:grid;gap:10px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .muted{color:var(--muted);}
+  .muted-i{color:var(--muted-icon);}
+  .btn{background:var(--primary);color:#fff;border-radius:12px;padding:10px 16px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;}
+  .btn:disabled{opacity:.5;}
+  .btn.outline{background:transparent;border:2px dashed color-mix(in srgb, var(--primary) 40%, transparent);color:var(--primary);}
+  .btn.ghost{background:var(--track);color:var(--text);}
+  .btn.danger{background:var(--red);color:#fff;}
+  .btn.sm{padding:6px 10px;font-size:11px;border-radius:20px;}
+  .pill{font-size:10px;font-weight:800;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .bar{height:7px;border-radius:6px;background:var(--track);overflow:hidden;}
+  .bar > i{display:block;height:100%;border-radius:6px;}
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;padding:0 2px;gap:8px;flex-wrap:wrap;}
+  .section-title h2{font-size:15px;margin:0;display:flex;align-items:center;gap:6px;}
+  .field label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+  .field input, .field select, .field textarea{width:100%;border:1px solid var(--border);background:var(--bg);border-radius:12px;padding:9px 11px;font-size:13px;}
+  .field textarea{resize:none;}
+  .field{margin-bottom:11px;}
+  .two-col{display:flex;gap:8px;}
+  .two-col > .field{flex:1;}
+  .empty{text-align:center;padding:34px 10px;color:var(--muted-icon);}
+  .empty .em{font-size:30px;margin-bottom:8px;}
+  .empty .t{color:var(--muted);font-size:13px;font-weight:600;}
+  .empty .s{font-size:12px;margin-top:4px;}
+
+  .overlay{position:fixed;inset:0;background:#00000055;display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+  @media(min-width:640px){.overlay{align-items:center;}}
+  .modal{background:var(--card);width:100%;max-width:420px;max-height:88vh;overflow-y:auto;border-radius:24px 24px 0 0;padding:18px;}
+  @media(min-width:640px){.modal{border-radius:24px;}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .modal-head h3{margin:0;font-size:15px;}
+  .close-x{color:var(--muted-icon);font-size:18px;}
+
+  .toggle{width:42px;height:24px;border-radius:20px;position:relative;background:var(--border);flex-shrink:0;}
+  .toggle.on{background:var(--primary);}
+  .toggle i{position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:var(--card);transition:.15s;}
+  .toggle.on i{right:2px;}
+  .toggle:not(.on) i{right:20px;}
+
+  .swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;flex-shrink:0;}
+  .swatch.sel{border-color:var(--text);}
+
+  .seg{display:flex;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:3px;gap:2px;}
+  .seg button{flex:1;padding:8px;border-radius:12px;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;}
+  .seg button.on{background:var(--primary);color:#fff;}
+
+  .choice{border:2px solid var(--border);border-radius:14px;padding:10px;text-align:center;font-size:12px;font-weight:700;flex:1;}
+  .choice.on{border-color:var(--primary);background:color-mix(in srgb, var(--primary) 10%, transparent);color:var(--primary);}
+
+  .emoji-grid{max-height:130px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;padding:4px;border:1px solid var(--border);border-radius:14px;margin-bottom:12px;}
+  .emoji-grid button{font-size:17px;width:30px;height:30px;border-radius:8px;}
+  .emoji-grid button:hover{background:var(--track);}
+
+  /* timetable grid */
+  .tt-wrap{overflow-x:auto;}
+  .tt-grid{display:grid;min-width:560px;}
+  .tt-head{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;padding:8px 4px;border-bottom:2px solid var(--border);}
+  .tt-col{position:relative;border-left:1px solid var(--border);}
+  .tt-col.zebra{background:var(--zebra);}
+  .tt-hourline{position:absolute;right:0;left:0;border-top:1px solid var(--border);font-size:0;}
+  .tt-timelabel{font-size:10px;color:var(--muted);display:flex;align-items:flex-start;justify-content:center;padding-top:2px;}
+  .tt-block{position:absolute;left:3px;right:3px;border-radius:12px;border:1.5px solid; padding:5px 6px;overflow:hidden;text-align:center;}
+  .tt-block b{font-size:10.5px;display:block;}
+  .tt-block span{font-size:9px;display:block;opacity:.85;}
+  .tt-addrow{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px;}
+  .tt-addbtn{flex-shrink:0;font-size:10px;font-weight:800;color:var(--primary);background:var(--track);border-radius:20px;padding:7px 12px;white-space:nowrap;}
+
+  /* month calendar */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-dow{text-align:center;font-size:9px;font-weight:800;color:var(--muted);padding-bottom:4px;}
+  .cal-cell{aspect-ratio:1;border-radius:12px;background:var(--track);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:700;}
+  .cal-cell.today{background:color-mix(in srgb, var(--primary) 18%, transparent);border:1.5px solid var(--primary);}
+  .cal-dots{display:flex;gap:2px;}
+  .cal-dots i{width:5px;height:5px;border-radius:50%;display:block;}
+
+  /* weeks static list */
+  .week-card{width:100%;text-align:right;}
+
+  /* review row */
+  .rev-check{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
+  .rev-check.done{background:var(--green);border-color:var(--green);color:#fff;}
+
+  a{color:inherit;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ======================= DATA & CONSTANTS ======================= */
+const STORAGE_KEY = "study-stations-v3";
+const uid = () => Math.random().toString(36).slice(2,10);
+const pad = n => String(n).padStart(2,"0");
+const toDateStr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayStr = () => toDateStr(new Date());
-const addDays = (dateStr, n) => {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return toDateStr(d);
-};
-const daysBetween = (a, b) => {
-  const da = new Date(a + "T00:00:00");
-  const db = new Date(b + "T00:00:00");
-  return Math.round((db - da) / 86400000);
-};
-const WEEKDAYS_AR = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const addDays = (s,n) => { const d=new Date(s+"T00:00:00"); d.setDate(d.getDate()+n); return toDateStr(d); };
+const daysBetween = (a,b) => Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000);
+const WEEKDAYS_AR = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
 const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-const humanDate = (dateStr) => {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${WEEKDAYS_AR[d.getDay()]} ${d.getDate()} ${MONTHS_AR[d.getMonth()]}`;
+const HIJRI_MONTHS = ["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
+const humanDate = s => { const d=new Date(s+"T00:00:00"); return `${WEEKDAYS_AR[d.getDay()]} ${d.getDate()} ${MONTHS_AR[d.getMonth()]}`; };
+const gDay = s => new Date(s+"T00:00:00").getDate();
+const gMonth = s => MONTHS_AR[new Date(s+"T00:00:00").getMonth()];
+const gYear = s => new Date(s+"T00:00:00").getFullYear();
+const formatRange = (a,b) => {
+  const sd=gDay(a), sm=gMonth(a), sy=gYear(a), ed=gDay(b), em=gMonth(b), ey=gYear(b);
+  if(a===b) return `${sd} ${sm} ${sy}م`;
+  if(sy===ey && sm===em) return `${sd} – ${ed} ${em} ${sy}م`;
+  if(sy===ey) return `${sd} ${sm} – ${ed} ${em} ${sy}م`;
+  return `${sd} ${sm} ${sy}م – ${ed} ${em} ${ey}م`;
 };
-const REVIEW_OFFSETS = [1, 3, 7, 14, 30];
-const DEFAULT_TASKS = ["قراءة السلايدات", "فهم المحتوى", "كتابة الملاحظات", "تلخيص Chapter", "حل الأسئلة"];
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-const STORAGE_KEY = "study-stations-state-v1";
+/* ---- Hijri conversion (tabular / "Kuwaiti" algorithm — approximate, ±1 day of official Umm al-Qura) ---- */
+function gregorianToJDN(y,m,d){ const a=Math.floor((14-m)/12), yy=y+4800-a, mm=m+12*a-3; return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045; }
+function jdnToHijri(jdn){
+  let l = jdn - 1948440 + 10632;
+  const n = Math.floor((l-1)/10631);
+  l = l - 10631*n + 354;
+  const j = Math.floor((10985-l)/5316)*Math.floor((50*l)/17719) + Math.floor(l/5670)*Math.floor((43*l)/15238);
+  l = l - Math.floor((30-j)/15)*Math.floor((17719*j)/50) - Math.floor(j/16)*Math.floor((15238*j)/43) + 29;
+  const month = Math.floor((24*l)/709);
+  const day = l - Math.floor((709*month)/24);
+  const year = 30*n + j - 30;
+  return {year, month, day};
+}
+function gToH(y,m,d){ const h = jdnToHijri(gregorianToJDN(y,m,d)); return [h.year,h.month,h.day]; }
+function hijriHumanDate(dateStr){ const d=new Date(dateStr+"T00:00:00"); const [hy,hm,hd]=gToH(d.getFullYear(),d.getMonth()+1,d.getDate()); return `${WEEKDAYS_AR[d.getDay()]} ${hd} ${HIJRI_MONTHS[hm-1]} ${hy}هـ`; }
+function displayDate(dateStr){ return state.dateSystem==="hijri" ? hijriHumanDate(dateStr) : humanDate(dateStr); }
 
-const emptyState = () => ({ subjects: [] });
+const YEAR_START = "2026-08-23";
+const WEEK_ORDINALS = ["الأول","الثاني","الثالث","الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","الثالث عشر","الرابع عشر","الخامس عشر","السادس عشر","السابع عشر","الثامن عشر","التاسع عشر","العشرون"];
+const WEEK_HIJRI = ["10 إلى 16 ربيع الأول 1448هـ","17 إلى 23 ربيع الأول 1448هـ","24 إلى 30 ربيع الأول 1448هـ","1 إلى 7 ربيع الآخر 1448هـ","8 إلى 14 ربيع الآخر 1448هـ","15 إلى 21 ربيع الآخر 1448هـ","22 إلى 28 ربيع الآخر 1448هـ","29 ربيع الآخر إلى 5 جمادى الأولى 1448هـ","6 إلى 12 جمادى الأولى 1448هـ","13 إلى 19 جمادى الأولى 1448هـ","20 إلى 26 جمادى الأولى 1448هـ","27 جمادى الأولى إلى 3 جمادى الآخرة 1448هـ","4 إلى 10 جمادى الآخرة 1448هـ","11 إلى 17 جمادى الآخرة 1448هـ","18 إلى 24 جمادى الآخرة 1448هـ","25 جمادى الآخرة إلى 1 رجب 1448هـ","2 إلى 8 رجب 1448هـ","9 إلى 15 رجب 1448هـ","16 إلى 22 رجب 1448هـ","23 إلى 29 رجب 1448هـ"];
+const WEEKS = WEEK_ORDINALS.map((ordinal,i)=>{ const start=addDays(YEAR_START,i*7); const end=addDays(start,6); return {number:i+1,ordinal,start,end,hijri:WEEK_HIJRI[i]}; });
+const KEY_DATES = [
+  {id:"term-start",type:"occasion",emoji:"🎓",title:"بداية العام الدراسي",start:"2026-08-23",end:"2026-08-23"},
+  {id:"national-day",type:"holiday",emoji:"🇸🇦",title:"إجازة اليوم الوطني",start:"2026-09-23",end:"2026-09-26"},
+  {id:"autumn-break",type:"holiday",emoji:"🍂",title:"إجازة الخريف",start:"2026-11-20",end:"2026-11-28"},
+  {id:"mid-year-break",type:"holiday",emoji:"❄️",title:"إجازة منتصف العام الدراسي",start:"2027-01-08",end:"2027-01-16"},
+];
+const EVENT_COLORS = {
+  occasion:{v:"--rose",label:"🎗️ مناسبات"}, holiday:{v:"--yellow",label:"🏖️ إجازات"},
+  test:{v:"--purple",label:"🏁 اختبارات"}, lecture:{v:"--blue",label:"📘 محاضرات"},
+  task:{v:"--green",label:"✅ مهام"}, reminder:{v:"--yellow",label:"🔔 تذكيرات"},
+  other:{v:"--gray-light",label:"⚪ أخرى"}, station:{v:"--primary",label:"🚉 محطة جديدة"},
+};
+const REVIEW_OFFSETS = [1,3,7,14,30];
+const DEFAULT_TASKS = ["قراءة السلايدات","فهم المحتوى","كتابة الملاحظات","تلخيص Chapter","حل الأسئلة"];
+const EMOJI_LIST = ["📘","📗","📕","📙","📖","📔","📒","📓","✏️","🖊️","📝","🗂️","📁","🧾",
+  "🧪","🔬","🧫","🧬","💊","🩺","🩻","🦴","🧠","❤️","🫀","🫁","👁️","🦷",
+  "📐","📏","🧮","➕","➗","🧲","⚛️","🌍","🌎","🌏","🗺️","🧭",
+  "🏛️","⚖️","💼","📊","📈","📉","💻","⌨️","🖥️","🛰️","🔭",
+  "🔧","⚙️","🛠️","🎨","🎭","🎼","🎻","🎹","🎵",
+  "🧑‍⚖️","🧑‍🔬","🧑‍⚕️","🧑‍🏫","🧑‍💻","🌱","🧴","🧵","🏗️","🚀","✈️","🏦","💰","🗣️","🌐","🧩","🕌","📜"];
+const COLOR_PRESETS = ["#C9A6B0","#9FB8CE","#A9C4A0","#E3C99A","#B9A6D6","#C4BFA8","#E0B6A3","#8FBFB0"];
+const GRADE_SCALE = {"A+":5.00,"A":4.75,"B+":4.50,"B":4.00,"B-":3.50,"C+":3.00,"C":2.50,"C-":2.00,"D+":1.50,"D":1.00,"F":0.00};
+const EVENT_TYPE_OPTIONS = [["occasion","🎗️ مناسبة"],["holiday","🏖️ إجازة"],["test","🏁 اختبار"],["lecture","📘 محاضرة"],["task","✅ مهمة"],["reminder","🔔 تذكير"],["other","⚪ أخرى"]];
 
-const newChapter = (name, order) => ({
-  id: uid(),
-  name,
-  order,
-  estMinutes: 90,
-  tasks: DEFAULT_TASKS.map((label) => ({ id: uid(), label, done: false })),
-  completedDate: null,
-  reviews: [],
-});
+/* ======================= STATE ======================= */
+const defaultState = () => ({ subjects:[], weeklyLog:{}, timetable:{}, gpaCourses:[], customEvents:[], todos:[], darkMode:false, timeFormat:"24", dateSystem:"gregorian" });
+let state = defaultState();
+let ui = { view:"home", subjectDetailId:null, weekDetailNumber:null, calMode:"month", modal:null, sidebarOpen:false };
+function isMobile(){ return window.innerWidth < 900; }
+function toggleSidebar(){ ui.sidebarOpen = !ui.sidebarOpen; render(); }
+function closeSidebar(){ ui.sidebarOpen = false; render(); }
+let calCursor = { y: new Date().getFullYear(), m: new Date().getMonth() };
 
-const newSubject = (name) => ({
-  id: uid(),
-  name,
-  chapters: [newChapter("Chapter 1", 0)],
-  tests: [],
-});
+async function persist(){ try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }catch(e){ console.error("save failed",e); } }
+async function load(){
+  try{ const res = await window.storage.get(STORAGE_KEY,false); if(res && res.value) state = {...defaultState(), ...JSON.parse(res.value)}; }catch(e){}
+  applyTheme(); render();
+}
+function applyTheme(){ document.documentElement.setAttribute("data-theme", state.darkMode?"dark":"light"); }
 
-/* derive chapter status: sequential unlocking */
-function chapterStatus(subject, chapter) {
-  if (chapter.completedDate) return "completed";
-  const firstIncomplete = subject.chapters.find((c) => !c.completedDate);
-  if (firstIncomplete && firstIncomplete.id === chapter.id) return "current";
+/* ======================= HELPERS ======================= */
+function hexToRgb(hex){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function rgbToHex(a){ return '#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join(''); }
+function mixHex(a,b,ratio){ const A=hexToRgb(a),B=hexToRgb(b); return rgbToHex(A.map((v,i)=>v+(B[i]-v)*ratio)); }
+const CARD_HEX_LIGHT = "#FBF7EC", CARD_HEX_DARK = "#212B27";
+function subjectPastel(hex){ const base = state.darkMode ? CARD_HEX_DARK : CARD_HEX_LIGHT; return { bg: mixHex(base, hex, 0.30), border: mixHex(base, hex, 0.75) }; }
+function fmtTime(hhmm){
+  if(!hhmm) return "--:--";
+  const [h,m] = hhmm.split(":").map(Number);
+  if(state.timeFormat==="24") return `${pad(h)}:${pad(m)}`;
+  const period = h<12 ? "ص":"م"; let h12=h%12; if(h12===0) h12=12;
+  return `${h12}:${pad(m)} ${period}`;
+}
+function timeToMin(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
+
+function newChapter(name, order, pages, estMinutes){
+  return { id:uid(), name, order, pages: pages?Number(pages):null, estMinutes: estMinutes?Number(estMinutes):null,
+    tasks: DEFAULT_TASKS.map(l=>({id:uid(),label:l,done:false})), completedDate:null, reviews:[] };
+}
+function newSubject({name,emoji,color,creditHours,chapterName,chapterPages,chapterMinutes}){
+  return { id:uid(), name, emoji: emoji||"📘", color: color||COLOR_PRESETS[0], creditHours: creditHours?Number(creditHours):null,
+    chapters:[newChapter(chapterName||"Chapter 1",0,chapterPages,chapterMinutes)], tests:[] };
+}
+function chapterStatus(subject, chapter){
+  if(chapter.completedDate) return "completed";
+  const first = subject.chapters.find(c=>!c.completedDate);
+  if(first && first.id===chapter.id) return "current";
   return "locked";
 }
-
-function reviewStatus(review) {
-  if (review.completed) return "completed";
+function reviewStatus(review){
+  if(review.completed) return "completed";
   const t = todayStr();
-  if (review.date === t) return "due";
-  if (review.date < t) return "late";
+  if(review.date===t) return "due";
+  if(review.date<t) return "late";
   return "upcoming";
 }
-
 const STATUS_COLORS = {
-  completed: { bg: "#6FA287", text: "#fff", label: "مكتملة", dot: "#6FA287" },
-  current: { bg: "#E4A93B", text: "#2B2B26", label: "الحالية", dot: "#E4A93B" },
-  locked: { bg: "#B9B3A4", text: "#fff", label: "مقفلة", dot: "#B9B3A4" },
-  due: { bg: "#E4A93B", text: "#2B2B26", label: "مستحقة اليوم", dot: "#E4A93B" },
-  late: { bg: "#C4593F", text: "#fff", label: "متأخرة", dot: "#C4593F" },
-  upcoming: { bg: "#3E7CA6", text: "#fff", label: "قادمة", dot: "#3E7CA6" },
+  completed:{v:"--green",text:"#fff",label:"✅ مكتملة"}, current:{v:"--gold",text:"#2B2B26",label:"⭐ الحالية"},
+  locked:{v:"--muted-icon",text:"#fff",label:"🔒 مقفلة"}, due:{v:"--gold",text:"#2B2B26",label:"🔥 مستحقة اليوم"},
+  late:{v:"--red",text:"#fff",label:"⚠️ متأخرة"}, upcoming:{v:"--blue",text:"#fff",label:"🔵 قادمة"},
 };
+function pill(status){ const s=STATUS_COLORS[status]; return `<span class="pill" style="background:var(${s.v});color:${s.text}">${s.label}</span>`; }
 
-/* ---------------------------------- app ---------------------------------- */
-
-export default function App() {
-  const [state, setState] = useState(emptyState());
-  const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState("home");
-  const [activeSubjectId, setActiveSubjectId] = useState(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [saveError, setSaveError] = useState(false);
-
-  // load
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get(STORAGE_KEY, false);
-        if (res && res.value) {
-          const parsed = JSON.parse(res.value);
-          setState(parsed);
-        }
-      } catch (e) {
-        // no existing data yet — fine
-      } finally {
-        setLoaded(true);
-      }
-    })();
-  }, []);
-
-  // save
-  useEffect(() => {
-    if (!loaded) return;
-    (async () => {
-      try {
-        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
-        setSaveError(!result);
-      } catch (e) {
-        setSaveError(true);
-      }
-    })();
-  }, [state, loaded]);
-
-  const updateSubject = useCallback((subjectId, fn) => {
-    setState((prev) => ({
-      ...prev,
-      subjects: prev.subjects.map((s) => (s.id === subjectId ? fn(s) : s)),
-    }));
-  }, []);
-
-  const addSubject = (name) => {
-    const s = newSubject(name);
-    setState((prev) => ({ ...prev, subjects: [...prev.subjects, s] }));
-    setActiveSubjectId(s.id);
-  };
-
-  const deleteSubject = (subjectId) => {
-    setState((prev) => ({ ...prev, subjects: prev.subjects.filter((s) => s.id !== subjectId) }));
-    if (activeSubjectId === subjectId) setActiveSubjectId(null);
-  };
-
-  const addChapter = (subjectId) => {
-    updateSubject(subjectId, (s) => ({
-      ...s,
-      chapters: [...s.chapters, newChapter(`Chapter ${s.chapters.length + 1}`, s.chapters.length)],
-    }));
-  };
-
-  const deleteChapter = (subjectId, chapterId) => {
-    updateSubject(subjectId, (s) => ({ ...s, chapters: s.chapters.filter((c) => c.id !== chapterId) }));
-  };
-
-  const toggleTask = (subjectId, chapterId, taskId) => {
-    updateSubject(subjectId, (s) => ({
-      ...s,
-      chapters: s.chapters.map((c) =>
-        c.id !== chapterId
-          ? c
-          : { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) }
-      ),
-    }));
-  };
-
-  const completeChapter = (subjectId, chapterId) => {
-    const today = todayStr();
-    updateSubject(subjectId, (s) => ({
-      ...s,
-      chapters: s.chapters.map((c) =>
-        c.id !== chapterId
-          ? c
-          : {
-              ...c,
-              completedDate: today,
-              reviews: REVIEW_OFFSETS.map((off) => ({
-                id: uid(),
-                date: addDays(today, off),
-                completed: false,
-              })),
-            }
-      ),
-    }));
-  };
-
-  const toggleReview = (subjectId, chapterId, reviewId) => {
-    updateSubject(subjectId, (s) => ({
-      ...s,
-      chapters: s.chapters.map((c) =>
-        c.id !== chapterId
-          ? c
-          : {
-              ...c,
-              reviews: c.reviews.map((r) => (r.id === reviewId ? { ...r, completed: !r.completed } : r)),
-            }
-      ),
-    }));
-  };
-
-  const addTest = (subjectId, test) => {
-    updateSubject(subjectId, (s) => ({ ...s, tests: [...s.tests, { id: uid(), ...test }] }));
-  };
-
-  const deleteTest = (subjectId, testId) => {
-    updateSubject(subjectId, (s) => ({ ...s, tests: s.tests.filter((t) => t.id !== testId) }));
-  };
-
-  const resetAll = async () => {
-    setState(emptyState());
-    try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(emptyState()), false);
-    } catch (e) {}
-    setSettingsOpen(false);
-    setActiveSubjectId(null);
-    setTab("home");
-  };
-
-  /* -------- aggregate derived data used across tabs -------- */
-  const allChaptersFlat = useMemo(() => {
-    const list = [];
-    state.subjects.forEach((s) => {
-      s.chapters.forEach((c) => list.push({ subject: s, chapter: c, status: chapterStatus(s, c) }));
-    });
-    return list;
-  }, [state]);
-
-  const allReviewsFlat = useMemo(() => {
-    const list = [];
-    state.subjects.forEach((s) => {
-      s.chapters.forEach((c) => {
-        c.reviews.forEach((r) => list.push({ subject: s, chapter: c, review: r, status: reviewStatus(r) }));
-      });
-    });
-    return list;
-  }, [state]);
-
-  const allTestsFlat = useMemo(() => {
-    const list = [];
-    state.subjects.forEach((s) => s.tests.forEach((t) => list.push({ subject: s, test: t })));
-    return list.sort((a, b) => a.test.date.localeCompare(b.test.date));
-  }, [state]);
-
-  if (!loaded) {
-    return (
-      <div style={{ fontFamily: "Tajawal, sans-serif" }} className="h-screen w-full flex items-center justify-center bg-[#F6F3EC]">
-        <div className="flex flex-col items-center gap-3 text-[#1F5C54]">
-          <TrainFront className="animate-pulse" size={36} />
-          <span className="text-sm">جارِ تحميل محطاتك…</span>
-        </div>
-      </div>
-    );
+function allChaptersFlat(){ const l=[]; state.subjects.forEach(s=>s.chapters.forEach(c=>l.push({subject:s,chapter:c,status:chapterStatus(s,c)}))); return l; }
+function allReviewsFlat(){ const l=[]; state.subjects.forEach(s=>s.chapters.forEach(c=>c.reviews.forEach(r=>l.push({subject:s,chapter:c,review:r,status:reviewStatus(r)})))); return l; }
+function allTestsFlat(){ const l=[]; state.subjects.forEach(s=>s.tests.forEach(t=>l.push({subject:s,test:t}))); return l.sort((a,b)=>a.test.date.localeCompare(b.test.date)); }
+function chapterRangeLabel(subject, fromId, toId){
+  if(!subject) return "";
+  const f = subject.chapters.find(c=>c.id===fromId), t = subject.chapters.find(c=>c.id===toId);
+  if(f && t && f.id!==t.id) return `${f.name} – ${t.name}`;
+  return (f||t)?.name || "";
+}
+function generateReviewDates(startDateStr, mode, endDate){
+  let last = 30;
+  let dates = REVIEW_OFFSETS.map(o=>addDays(startDateStr,o));
+  if(mode==="infinite"){
+    for(let i=0;i<6;i++){ last*=2; dates.push(addDays(startDateStr,last)); }
+  } else if(mode==="until" && endDate){
+    dates = dates.filter(d=>d<=endDate);
+    while(true){ last*=2; const d=addDays(startDateStr,last); if(d>endDate) break; dates.push(d); }
   }
-
-  return (
-    <div dir="rtl" lang="ar" className="h-screen w-full flex flex-col bg-[#F6F3EC] text-[#23342F]" style={{ fontFamily: "Tajawal, sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap');
-        .font-display { font-family: 'Cairo', sans-serif; }
-        * { scrollbar-width: thin; scrollbar-color: #B9B3A4 transparent; }
-        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(228,169,59,0.45); } 100% { box-shadow: 0 0 0 10px rgba(228,169,59,0); } }
-        .pulse-current { animation: pulseRing 1.8s ease-out infinite; }
-      `}</style>
-
-      <Header
-        onOpenSettings={() => setSettingsOpen(true)}
-        saveError={saveError}
-      />
-
-      <main className="flex-1 overflow-y-auto pb-24">
-        {tab === "home" && (
-          <HomeTab
-            state={state}
-            allChaptersFlat={allChaptersFlat}
-            allReviewsFlat={allReviewsFlat}
-            allTestsFlat={allTestsFlat}
-            goToSubject={(id) => { setActiveSubjectId(id); setTab("subjects"); }}
-            goTo={setTab}
-          />
-        )}
-        {tab === "subjects" && (
-          <SubjectsTab
-            state={state}
-            activeSubjectId={activeSubjectId}
-            setActiveSubjectId={setActiveSubjectId}
-            addSubject={addSubject}
-            deleteSubject={deleteSubject}
-            addChapter={addChapter}
-            deleteChapter={deleteChapter}
-            toggleTask={toggleTask}
-            completeChapter={completeChapter}
-          />
-        )}
-        {tab === "reviews" && (
-          <ReviewsTab allReviewsFlat={allReviewsFlat} toggleReview={toggleReview} />
-        )}
-        {tab === "plan" && (
-          <PlanTab
-            state={state}
-            allTestsFlat={allTestsFlat}
-            addTest={addTest}
-            deleteTest={deleteTest}
-            allReviewsFlat={allReviewsFlat}
-          />
-        )}
-        {tab === "stats" && <StatsTab state={state} allChaptersFlat={allChaptersFlat} allReviewsFlat={allReviewsFlat} />}
-      </main>
-
-      <BottomNav tab={tab} setTab={setTab} />
-
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onReset={resetAll} />}
-    </div>
-  );
+  return dates;
 }
 
-/* -------------------------------- header -------------------------------- */
+/* ======================= ACTIONS ======================= */
+function setView(v){ ui.view=v; ui.subjectDetailId=null; ui.weekDetailNumber=null; if(isMobile()) ui.sidebarOpen=false; render(); }
+function openSubject(id){ ui.subjectDetailId=id; render(); }
+function backToSubjects(){ ui.subjectDetailId=null; render(); }
+function openWeek(n){ ui.weekDetailNumber=n; render(); }
+function backToWeeks(){ ui.weekDetailNumber=null; render(); }
+function setCalMode(m){ ui.calMode=m; render(); }
 
-function Header({ onOpenSettings, saveError }) {
-  return (
-    <header className="flex items-center justify-between px-4 py-3 bg-[#1F5C54] text-white shrink-0">
-      <div className="flex items-center gap-2">
-        <div className="bg-white/15 rounded-full p-1.5">
-          <TrainFront size={20} />
-        </div>
-        <div>
-          <h1 className="font-display font-extrabold text-base leading-none">Study Stations</h1>
-          <p className="text-[11px] text-white/70 leading-none mt-1">رحلتك من الفصل إلى الاختبار</p>
-        </div>
+function openModal(html){ ui.modal=html; render(); }
+function closeModal(){ ui.modal=null; render(); }
+
+function updateSubject(id, fn){ state.subjects = state.subjects.map(s=> s.id===id ? fn(s) : s); persist(); render(); }
+
+function submitAddSubject(){
+  const name = document.getElementById('f-subj-name').value.trim();
+  if(!name) return;
+  const emoji = document.getElementById('f-subj-emoji').value.trim() || "📘";
+  const color = document.getElementById('f-subj-color').value;
+  const creditHours = document.getElementById('f-subj-hours').value;
+  const chapterName = document.getElementById('f-subj-chname').value.trim() || "Chapter 1";
+  const chapterPages = document.getElementById('f-subj-chpages').value;
+  const chapterMinutes = document.getElementById('f-subj-chmin').value;
+  const s = newSubject({name,emoji,color,creditHours,chapterName,chapterPages,chapterMinutes});
+  state.subjects.push(s); persist();
+  closeModal(); ui.subjectDetailId = s.id; ui.view="subjects"; render();
+}
+function pickEmoji(fieldId, e){ document.getElementById(fieldId).value = e; }
+function deleteSubject(id){ state.subjects = state.subjects.filter(s=>s.id!==id); if(ui.subjectDetailId===id) ui.subjectDetailId=null; persist(); closeModal(); render(); }
+function addChapterSubmit(subjectId){
+  const name = document.getElementById('f-ch-name').value.trim(); if(!name) return;
+  const pages = document.getElementById('f-ch-pages').value;
+  const minutes = document.getElementById('f-ch-min').value;
+  updateSubject(subjectId, s=>({...s, chapters:[...s.chapters, newChapter(name, s.chapters.length, pages, minutes)]}));
+  closeModal();
+}
+function editChapterSubmit(subjectId, chapterId){
+  const name = document.getElementById('f-ch-name').value.trim(); if(!name) return;
+  const pages = document.getElementById('f-ch-pages').value;
+  const minutes = document.getElementById('f-ch-min').value;
+  updateSubject(subjectId, s=>({...s, chapters: s.chapters.map(c=> c.id===chapterId ? {...c,name,pages:pages?Number(pages):null,estMinutes:minutes?Number(minutes):null} : c)}));
+  closeModal();
+}
+function deleteChapter(subjectId, chapterId){ updateSubject(subjectId, s=>({...s, chapters:s.chapters.filter(c=>c.id!==chapterId)})); }
+function toggleTask(subjectId, chapterId, taskId){
+  updateSubject(subjectId, s=>({...s, chapters: s.chapters.map(c=> c.id!==chapterId?c:{...c,tasks:c.tasks.map(t=>t.id===taskId?{...t,done:!t.done}:t)})}));
+}
+function openCompleteChapterModal(subjectId, chapterId){
+  const body = `
+  <p class="muted" style="font-size:12px;margin-bottom:12px">إلى متى تريد الاستمرار في مراجعة هذه المحطة بنظام التكرار المتباعد؟</p>
+  <div class="row" style="gap:8px;margin-bottom:12px">
+    <button id="opt-infinite" class="choice on" onclick="selectReviewMode('infinite')">🔁 مستمرة تلقائيًا</button>
+    <button id="opt-until" class="choice" onclick="selectReviewMode('until')">📅 حتى تاريخ محدد</button>
+  </div>
+  <div id="until-date-wrap" style="display:none" class="field"><label>آخر تاريخ للمراجعة</label><input type="date" id="f-review-end" value="${addDays(todayStr(),60)}"></div>
+  <button class="btn" style="width:100%;justify-content:center" onclick="confirmCompleteChapter('${subjectId}','${chapterId}')">🚀 إكمال المحطة!</button>
+  `;
+  openModal(modalWrap("🎉 إكمال المحطة", body));
+  window.__reviewMode = "infinite";
+}
+function selectReviewMode(m){
+  window.__reviewMode = m;
+  document.getElementById('opt-infinite').className = "choice" + (m==="infinite"?" on":"");
+  document.getElementById('opt-until').className = "choice" + (m==="until"?" on":"");
+  document.getElementById('until-date-wrap').style.display = m==="until" ? "block" : "none";
+}
+function confirmCompleteChapter(subjectId, chapterId){
+  const mode = window.__reviewMode || "infinite";
+  const endDate = mode==="until" ? document.getElementById('f-review-end').value : null;
+  const today = todayStr();
+  updateSubject(subjectId, s=>({...s, chapters: s.chapters.map(c=> c.id!==chapterId?c:{...c, completedDate:today,
+    reviews: generateReviewDates(today, mode, endDate).map(d=>({id:uid(),date:d,completed:false}))})}));
+  closeModal();
+}
+function toggleReview(subjectId, chapterId, reviewId){
+  updateSubject(subjectId, s=>({...s, chapters: s.chapters.map(c=> c.id!==chapterId?c:{...c, reviews:c.reviews.map(r=>r.id===reviewId?{...r,completed:!r.completed}:r)})}));
+}
+
+function saveTestSubmit(editingId){
+  const subjectId = document.getElementById('f-test-subject').value;
+  const name = document.getElementById('f-test-name').value.trim(); if(!name) return;
+  const date = document.getElementById('f-test-date').value;
+  const fromChapterId = document.getElementById('f-test-from').value;
+  const toChapterId = document.getElementById('f-test-to').value;
+  state.subjects = state.subjects.map(s=>({...s, tests: s.tests.filter(t=>t.id!==editingId)}));
+  state.subjects = state.subjects.map(s=> s.id===subjectId ? {...s, tests:[...s.tests,{id:editingId||uid(),name,date,fromChapterId,toChapterId}]} : s);
+  persist(); closeModal(); render();
+}
+function deleteTest(subjectId, testId){ updateSubject(subjectId, s=>({...s, tests:s.tests.filter(t=>t.id!==testId)})); closeModal(); }
+
+function saveDayEntrySubmit(dateStr, editingId){
+  const subjectId = document.getElementById('f-day-subject').value;
+  const title = document.getElementById('f-day-title').value.trim(); if(!title) return;
+  const description = document.getElementById('f-day-desc').value;
+  const pages = document.getElementById('f-day-pages').value;
+  const notes = document.getElementById('f-day-notes').value;
+  const linkAsStation = document.getElementById('f-day-link').checked;
+
+  let linkedChapterId = editingId ? undefined : null;
+  if(linkAsStation && subjectId && title){
+    const norm = title.toLowerCase();
+    state.subjects = state.subjects.map(s=>{
+      if(s.id!==subjectId) return s;
+      const existing = s.chapters.find(c=>c.name.trim().toLowerCase()===norm);
+      if(existing){ linkedChapterId = existing.id; return s; }
+      const ch = newChapter(title, s.chapters.length);
+      linkedChapterId = ch.id;
+      return {...s, chapters:[...s.chapters, ch]};
+    });
+  }
+  const day = state.weeklyLog[dateStr] || [];
+  if(editingId){
+    state.weeklyLog[dateStr] = day.map(e=> e.id===editingId ? {...e, subjectId,title,description,pages:pages?Number(pages):null,notes, linkedChapterId: linkedChapterId!==undefined?linkedChapterId:e.linkedChapterId} : e);
+  } else {
+    state.weeklyLog[dateStr] = [...day, {id:uid(),subjectId,title,description,pages:pages?Number(pages):null,notes,linkedChapterId}];
+  }
+  persist(); render();
+  openDayModal(dateStr);
+}
+function deleteDayEntry(dateStr, entryId){ state.weeklyLog[dateStr] = (state.weeklyLog[dateStr]||[]).filter(e=>e.id!==entryId); persist(); render(); openDayModal(dateStr); }
+
+function saveSlotSubmit(dayIdx, editingId){
+  const subjectId = document.getElementById('f-slot-subject').value;
+  const label = document.getElementById('f-slot-label').value.trim();
+  const kind = document.getElementById('f-slot-kind').value;
+  const start = document.getElementById('f-slot-start').value;
+  const end = document.getElementById('f-slot-end').value;
+  const day = state.timetable[dayIdx] || [];
+  if(editingId) state.timetable[dayIdx] = day.map(s=> s.id===editingId ? {...s,subjectId,label,kind,start,end} : s);
+  else state.timetable[dayIdx] = [...day, {id:uid(),subjectId,label,kind,start,end}];
+  persist(); closeModal(); render();
+}
+function deleteSlot(dayIdx, slotId){ state.timetable[dayIdx] = (state.timetable[dayIdx]||[]).filter(s=>s.id!==slotId); persist(); closeModal(); render(); }
+
+function addGpaCourse(){ state.gpaCourses.push({id:uid(), name:"مقرر", hours:3, grade:"A", semester:""}); persist(); render(); }
+function updateGpaCourse(id, field, value){ state.gpaCourses = state.gpaCourses.map(c=> c.id===id ? {...c,[field]: field==='hours'?Number(value):value} : c); persist(); render(); }
+function deleteGpaCourse(id){ state.gpaCourses = state.gpaCourses.filter(c=>c.id!==id); persist(); render(); }
+function computeGpa(courses){ const h=courses.reduce((s,c)=>s+(Number(c.hours)||0),0); const p=courses.reduce((s,c)=>s+(GRADE_SCALE[c.grade]||0)*(Number(c.hours)||0),0); return h?p/h:0; }
+
+function saveEventSubmit(){
+  const date = document.getElementById('f-ev-date').value;
+  const title = document.getElementById('f-ev-title').value.trim(); if(!title||!date) return;
+  const type = document.getElementById('f-ev-type').value;
+  state.customEvents.push({id:uid(), date, title, type});
+  persist(); closeModal(); render();
+}
+function deleteCustomEvent(id){ state.customEvents = state.customEvents.filter(e=>e.id!==id); persist(); render(); }
+
+function toggleDark(){ state.darkMode = !state.darkMode; applyTheme(); persist(); render(); }
+function setTimeFormat(f){ state.timeFormat = f; persist(); render(); }
+function setDateSystem(d){ state.dateSystem = d; persist(); render(); }
+function resetAll(){ const dm=state.darkMode, tf=state.timeFormat, ds=state.dateSystem; state = {...defaultState(), darkMode:dm, timeFormat:tf, dateSystem:ds}; persist(); closeModal(); ui={view:"home",subjectDetailId:null,weekDetailNumber:null,calMode:"month",modal:null}; render(); }
+
+/* ======================= RENDER: SHELL ======================= */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="shell">
+      ${sidebarHtml()}
+      <div class="content">
+        ${topbarHtml()}
+        <div class="main">${viewHtml()}</div>
       </div>
-      <button onClick={onOpenSettings} className="p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition" aria-label="الإعدادات">
-        <Settings size={20} />
-      </button>
-      {saveError && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-[#C4593F] text-white text-xs px-3 py-1 rounded-full shadow">
-          تعذّر الحفظ التلقائي
-        </div>
-      )}
-    </header>
-  );
+    </div>
+    ${ui.sidebarOpen && isMobile() ? `<div class="sidebar-backdrop" onclick="closeSidebar()"></div>` : ""}
+    ${ui.modal ? `<div class="overlay" onclick="if(event.target===this) closeModal()">${ui.modal}</div>` : ""}
+  `;
 }
-
-/* -------------------------------- bottom nav -------------------------------- */
-
-function BottomNav({ tab, setTab }) {
+function sidebarHtml(){
   const items = [
-    { id: "home", label: "الرئيسية", icon: Home },
-    { id: "subjects", label: "المواد", icon: BookOpen },
-    { id: "reviews", label: "المراجعات", icon: RotateCw },
-    { id: "plan", label: "الخطة", icon: CalendarDays },
-    { id: "stats", label: "الإحصائيات", icon: BarChart3 },
+    {id:"home",label:"الرئيسية",ic:"🏠"}, {id:"subjects",label:"المواد",ic:"📚"},
+    {id:"weeks",label:"الأسابيع",ic:"🗓️"}, {id:"timetable",label:"الجدول",ic:"📘"},
+    {id:"calendar",label:"التقويم",ic:"📅"}, {id:"reviews",label:"المراجعات",ic:"🔄"},
+    {id:"todos",label:"المهام",ic:"✅"}, {id:"plan",label:"الخطة",ic:"🏁"},
+    {id:"gpa",label:"المعدل",ic:"🧮"}, {id:"stats",label:"الإحصائيات",ic:"📊"},
   ];
-  return (
-    <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-[#E9E4D8] flex justify-around items-stretch shadow-[0_-2px_10px_rgba(0,0,0,0.04)]" style={{ maxWidth: 640, margin: "0 auto" }}>
-      {items.map((it) => {
-        const Icon = it.icon;
-        const active = tab === it.id;
-        return (
-          <button
-            key={it.id}
-            onClick={() => setTab(it.id)}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2.5 transition"
-          >
-            <Icon size={20} color={active ? "#1F5C54" : "#B9B3A4"} strokeWidth={active ? 2.5 : 2} />
-            <span className={`text-[10px] ${active ? "text-[#1F5C54] font-bold" : "text-[#B9B3A4]"}`}>{it.label}</span>
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
-
-/* -------------------------------- card shell -------------------------------- */
-
-function Card({ children, className = "" }) {
-  return <div className={`bg-white rounded-3xl shadow-sm p-4 ${className}`}>{children}</div>;
-}
-
-function SectionTitle({ children, icon: Icon }) {
-  return (
-    <div className="flex items-center gap-2 mb-3 px-1">
-      {Icon && <Icon size={17} className="text-[#1F5C54]" />}
-      <h2 className="font-display font-bold text-[15px] text-[#23342F]">{children}</h2>
+  return `
+  <aside class="sidebar ${ui.sidebarOpen?'open':''}">
+    <div class="row" style="padding:6px 4px 16px">
+      <div class="side-logo" style="padding:0"><div class="box">🚉</div><div><b class="font-d">Study Stations</b><span>رحلتك بين المحطات</span></div></div>
+      <button class="hamburger" onclick="closeSidebar()" style="display:none" id="side-close">✕</button>
     </div>
-  );
-}
-
-function EmptyState({ text, sub }) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center py-10 text-[#B9B3A4]">
-      <TrainFront size={30} className="mb-2" />
-      <p className="text-sm font-medium text-[#8b8677]">{text}</p>
-      {sub && <p className="text-xs mt-1 max-w-[220px]">{sub}</p>}
+    ${items.map(it=>`<button class="nav-item ${ui.view===it.id?'active':''}" onclick="setView('${it.id}')"><span class="ic">${it.ic}</span><span>${it.label}</span></button>`).join("")}
+    <div class="side-bottom">
+      <button class="nav-item" onclick="openSettingsModal()"><span class="ic">⚙️</span><span>الإعدادات</span></button>
     </div>
-  );
+  </aside>`;
+}
+function topbarHtml(){
+  const titles = {home:"🏠 الرئيسية",subjects:"📚 المواد",weeks:"🗓️ الأسابيع",timetable:"📘 الجدول الدراسي",calendar:"📅 التقويم",reviews:"🔄 المراجعات",todos:"✅ المهام",plan:"🏁 الخطة",gpa:"🧮 حاسبة المعدل",stats:"📊 الإحصائيات"};
+  return `<div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <h1 class="font-d">${titles[ui.view]||""}</h1>
+    </div>
+    <button onclick="openSettingsModal()" style="font-size:18px">⚙️</button>
+  </div>`;
+}
+function viewHtml(){
+  if(ui.view==="home") return homeView();
+  if(ui.view==="subjects") return ui.subjectDetailId ? subjectDetailView(ui.subjectDetailId) : subjectsView();
+  if(ui.view==="weeks") return ui.weekDetailNumber!==null ? weekDetailView(ui.weekDetailNumber) : weeksView();
+  if(ui.view==="timetable") return timetableView();
+  if(ui.view==="calendar") return calendarView();
+  if(ui.view==="reviews") return reviewsView();
+  if(ui.view==="plan") return planView();
+  if(ui.view==="gpa") return gpaView();
+  if(ui.view==="stats") return statsView();
+  return "";
 }
 
-/* -------------------------------- HOME TAB -------------------------------- */
-
-function HomeTab({ state, allChaptersFlat, allReviewsFlat, allTestsFlat, goToSubject, goTo }) {
-  const currentStations = allChaptersFlat.filter((x) => x.status === "current");
-  const todayReviews = allReviewsFlat.filter((x) => x.status === "due");
-  const totalChapters = allChaptersFlat.length;
-  const completedChapters = allChaptersFlat.filter((x) => x.status === "completed").length;
-  const pct = totalChapters ? Math.round((completedChapters / totalChapters) * 100) : 0;
-  const studyHours = Math.round(
-    (allChaptersFlat.filter((x) => x.status === "completed").reduce((sum, x) => sum + (x.chapter.estMinutes || 90), 0) / 60) * 10
-  ) / 10;
-
-  const nearestTest = allTestsFlat.filter((x) => x.test.date >= todayStr()).sort((a, b) => a.test.date.localeCompare(b.test.date))[0];
-  const daysLeft = nearestTest ? daysBetween(todayStr(), nearestTest.test.date) : null;
-
-  if (state.subjects.length === 0) {
-    return (
-      <div className="px-4 pt-6">
-        <Card>
-          <EmptyState text="لا توجد مواد بعد" sub="أضف أول مادة من تبويب «المواد» لتبدأ رحلتك بين المحطات." />
-          <button onClick={() => goTo("subjects")} className="w-full mt-2 bg-[#1F5C54] text-white rounded-2xl py-2.5 text-sm font-bold">
-            إضافة مادة
-          </button>
-        </Card>
-      </div>
-    );
+/* ======================= HOME ======================= */
+function homeView(){
+  if(state.subjects.length===0){
+    return `<div class="card"><div class="empty"><div class="em">📚</div><div class="t">لا توجد مواد بعد</div><div class="s">أضف أول مادة وابدأ رحلتك بين المحطات! 🚉✨</div></div>
+      <button class="btn" style="width:100%;justify-content:center;margin-top:8px" onclick="openAddSubjectModal()">➕ إضافة مادة الآن</button></div>`;
   }
+  const chapters = allChaptersFlat();
+  const total = chapters.length, done = chapters.filter(x=>x.status==="completed").length;
+  const pct = total? Math.round(done/total*100):0;
+  const hours = Math.round(chapters.filter(x=>x.status==="completed").reduce((s,x)=>s+(x.chapter.estMinutes||90),0)/60*10)/10;
+  const tests = allTestsFlat().filter(x=>x.test.date>=todayStr()).sort((a,b)=>a.test.date.localeCompare(b.test.date));
+  const nearest = tests[0]; const daysLeft = nearest? daysBetween(todayStr(),nearest.test.date):null;
+  const current = chapters.filter(x=>x.status==="current");
+  const dueReviews = allReviewsFlat().filter(x=>x.status==="due");
 
-  return (
-    <div className="px-4 pt-4 flex flex-col gap-4">
-      {/* progress ring card */}
-      <Card className="bg-[#1F5C54] text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-white/70">التقدم العام</p>
-            <p className="font-display font-extrabold text-3xl">{pct}%</p>
-            <p className="text-xs text-white/70 mt-1">{completedChapters} / {totalChapters} محطة مكتملة</p>
-          </div>
-          <RingProgress pct={pct} />
-        </div>
-        <div className="flex gap-3 mt-4 text-center">
-          <div className="flex-1 bg-white/10 rounded-2xl py-2">
-            <p className="font-display font-bold text-lg">{totalChapters - completedChapters}</p>
-            <p className="text-[10px] text-white/70">محطات متبقية</p>
-          </div>
-          <div className="flex-1 bg-white/10 rounded-2xl py-2">
-            <p className="font-display font-bold text-lg">{studyHours}</p>
-            <p className="text-[10px] text-white/70">ساعات مذاكرة</p>
-          </div>
-          <div className="flex-1 bg-white/10 rounded-2xl py-2">
-            <p className="font-display font-bold text-lg">{daysLeft !== null ? daysLeft : "—"}</p>
-            <p className="text-[10px] text-white/70">أيام للاختبار</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* station of the day */}
-      <div>
-        <SectionTitle icon={TrainFront}>محطة اليوم</SectionTitle>
-        {currentStations.length === 0 ? (
-          <Card><EmptyState text="لا توجد محطة نشطة الآن" /></Card>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {currentStations.map(({ subject, chapter }) => {
-              const doneTasks = chapter.tasks.filter((t) => t.done).length;
-              return (
-                <Card key={chapter.id} className="cursor-pointer" >
-                  <button className="w-full text-right" onClick={() => goToSubject(subject.id)}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[11px] text-[#8b8677]">{subject.name}</p>
-                        <p className="font-display font-bold text-[15px]">{chapter.name}</p>
-                      </div>
-                      <div className="pulse-current rounded-full p-2" style={{ background: "#E4A93B22" }}>
-                        <TrainFront size={18} color="#E4A93B" />
-                      </div>
-                    </div>
-                    <div className="mt-2 h-1.5 bg-[#F1EEE4] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#E4A93B] rounded-full" style={{ width: `${Math.round((doneTasks / chapter.tasks.length) * 100)}%` }} />
-                    </div>
-                    <p className="text-[11px] text-[#8b8677] mt-1">{doneTasks} / {chapter.tasks.length} مهام منجزة</p>
-                  </button>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* reviews due today */}
-      <div>
-        <SectionTitle icon={RotateCw}>المراجعات المستحقة اليوم</SectionTitle>
-        {todayReviews.length === 0 ? (
-          <Card><p className="text-sm text-[#8b8677] text-center py-2">لا توجد مراجعات مستحقة اليوم 🎉</p></Card>
-        ) : (
-          <Card className="flex flex-col gap-2">
-            {todayReviews.map(({ subject, chapter, review }) => (
-              <div key={review.id} className="flex items-center justify-between border-b border-[#F1EEE4] last:border-0 pb-2 last:pb-0">
-                <div>
-                  <p className="text-[11px] text-[#8b8677]">{subject.name}</p>
-                  <p className="text-sm font-bold">{chapter.name}</p>
-                </div>
-                <StatusPill status="due" />
-              </div>
-            ))}
-          </Card>
-        )}
-      </div>
-
-      {nearestTest && (
-        <div>
-          <SectionTitle icon={Flag}>أقرب اختبار</SectionTitle>
-          <Card className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] text-[#8b8677]">{nearestTest.subject.name}</p>
-              <p className="font-display font-bold text-sm">{nearestTest.test.name}</p>
-              <p className="text-[11px] text-[#8b8677] mt-0.5">{humanDate(nearestTest.test.date)}</p>
-            </div>
-            <div className="text-center bg-[#F6F3EC] rounded-2xl px-3 py-2">
-              <p className="font-display font-extrabold text-xl text-[#C4593F]">{daysLeft}</p>
-              <p className="text-[10px] text-[#8b8677]">يوم</p>
-            </div>
-          </Card>
-        </div>
-      )}
+  return `
+  <div class="card" style="background:var(--primary);color:#fff;border:none">
+    <div class="row">
+      <div><p style="opacity:.7;font-size:11px;margin:0">🔥 التقدم العام</p><p class="font-d" style="font-size:30px;font-weight:800;margin:2px 0">${pct}%</p><p style="opacity:.7;font-size:11px;margin:0">${done} / ${total} محطة مكتملة</p></div>
+      <svg width="66" height="66" viewBox="0 0 66 66"><circle cx="33" cy="33" r="26" stroke="#ffffff33" stroke-width="7" fill="none"/><circle cx="33" cy="33" r="26" stroke="var(--gold)" stroke-width="7" fill="none" stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="${2*Math.PI*26 - pct/100*2*Math.PI*26}" stroke-linecap="round" transform="rotate(-90 33 33)"/></svg>
     </div>
-  );
+    <div style="display:flex;gap:8px;margin-top:14px;text-align:center">
+      <div style="flex:1;background:#ffffff1a;border-radius:16px;padding:8px"><p class="font-d" style="font-weight:800;margin:0">${total-done}</p><p style="font-size:9px;opacity:.7;margin:2px 0 0">🚉 متبقية</p></div>
+      <div style="flex:1;background:#ffffff1a;border-radius:16px;padding:8px"><p class="font-d" style="font-weight:800;margin:0">${hours}</p><p style="font-size:9px;opacity:.7;margin:2px 0 0">⏱️ ساعة</p></div>
+      <div style="flex:1;background:#ffffff1a;border-radius:16px;padding:8px"><p class="font-d" style="font-weight:800;margin:0">${daysLeft ?? "—"}</p><p style="font-size:9px;opacity:.7;margin:2px 0 0">⏳ للاختبار</p></div>
+    </div>
+  </div>
+
+  <div class="section-title"><h2>📊 تقدم كل مادة</h2></div>
+  <div class="grid">${state.subjects.map(s=>{
+    const d=s.chapters.filter(c=>chapterStatus(s,c)==="completed").length, t=s.chapters.length, p=t?Math.round(d/t*100):0;
+    const pastel = subjectPastel(s.color);
+    return `<div class="card" style="cursor:pointer;border-right:5px solid ${pastel.border}" onclick="setView('subjects');openSubject('${s.id}')">
+      <div class="row"><p style="margin:0;font-weight:700">${s.emoji} ${esc(s.name)}</p><p class="muted" style="margin:0;font-size:12px">${d}/${t} · ${p}%</p></div>
+      <div class="bar" style="margin-top:8px"><i style="width:${p}%;background:var(--primary)"></i></div>
+    </div>`;
+  }).join("")}</div>
+
+  <div class="section-title"><h2>🚉 محطة اليوم</h2></div>
+  ${current.length===0 ? `<div class="card"><div class="empty"><div class="em">🚉</div><div class="t">لا توجد محطة نشطة الآن</div></div></div>` :
+    `<div class="grid">${current.map(({subject,chapter})=>{
+      const doneT = chapter.tasks.filter(t=>t.done).length;
+      return `<div class="card" style="cursor:pointer" onclick="setView('subjects');openSubject('${subject.id}')">
+        <div class="row"><div><p class="muted" style="margin:0;font-size:11px">${subject.emoji} ${esc(subject.name)}</p><p class="font-d" style="margin:2px 0 0;font-weight:800">${esc(chapter.name)}</p></div><div style="background:color-mix(in srgb, var(--gold) 20%, transparent);border-radius:50%;padding:8px">🚉</div></div>
+        <div class="bar" style="margin-top:8px"><i style="width:${Math.round(doneT/chapter.tasks.length*100)}%;background:var(--gold)"></i></div>
+        <p class="muted" style="font-size:11px;margin:6px 0 0">${doneT} / ${chapter.tasks.length} مهام منجزة</p>
+      </div>`;
+    }).join("")}</div>`}
+
+  <div class="section-title"><h2>🔄 المراجعات المستحقة اليوم</h2></div>
+  ${dueReviews.length===0 ? `<div class="card"><p class="muted" style="text-align:center;margin:6px 0">لا توجد مراجعات مستحقة اليوم 🎉</p></div>` :
+    `<div class="card grid">${dueReviews.map(x=>`<div class="row" style="border-bottom:1px solid var(--track);padding-bottom:6px"><div><p class="muted" style="margin:0;font-size:11px">${x.subject.emoji} ${esc(x.subject.name)}</p><p style="margin:0;font-weight:700;font-size:13px">${esc(x.chapter.name)}</p></div>${pill('due')}</div>`).join("")}</div>`}
+
+  ${nearest ? `<div class="section-title"><h2>🏁 أقرب اختبار</h2></div>
+  <div class="card row"><div><p class="muted" style="margin:0;font-size:11px">${nearest.subject.emoji} ${esc(nearest.subject.name)}</p><p class="font-d" style="margin:2px 0;font-weight:800">${esc(nearest.test.name)}</p><p class="muted" style="margin:0;font-size:11px">${displayDate(nearest.test.date)}</p></div>
+    <div style="background:var(--track);border-radius:16px;padding:8px 12px;text-align:center"><p class="font-d" style="font-weight:800;color:var(--red);margin:0;font-size:19px">${daysLeft}</p><p class="muted" style="margin:0;font-size:9px">يوم</p></div></div>` : ""}
+  `;
 }
 
-function RingProgress({ pct }) {
-  const r = 26, c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
-  return (
-    <svg width="66" height="66" viewBox="0 0 66 66">
-      <circle cx="33" cy="33" r={r} stroke="#ffffff33" strokeWidth="7" fill="none" />
-      <circle
-        cx="33" cy="33" r={r} stroke="#E4A93B" strokeWidth="7" fill="none"
-        strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
-        transform="rotate(-90 33 33)"
-      />
-    </svg>
-  );
+/* ======================= SUBJECTS ======================= */
+function subjectsView(){
+  return `
+  <div class="section-title"><h2>📚 موادّي</h2><button class="btn sm" onclick="openAddSubjectModal()">➕ مادة جديدة</button></div>
+  ${state.subjects.length===0 ? `<div class="card"><div class="empty"><div class="em">📚</div><div class="t">لم تضف أي مادة بعد</div><div class="s">اضغط «➕ مادة جديدة» أعلاه لتبدأ! 🚉</div></div></div>` : `
+  <div class="grid">${state.subjects.map(s=>{
+    const d=s.chapters.filter(c=>chapterStatus(s,c)==="completed").length, t=s.chapters.length, p=t?Math.round(d/t*100):0;
+    const pastel = subjectPastel(s.color);
+    return `<div class="card" style="cursor:pointer;padding:0;overflow:hidden;border-right:6px solid ${pastel.border}" onclick="openSubject('${s.id}')">
+      <div style="padding:14px">
+        <div class="row"><p class="font-d" style="margin:0;font-weight:800;font-size:15px">${s.emoji} ${esc(s.name)}</p><span class="muted-i">‹</span></div>
+        <div class="bar" style="margin-top:8px"><i style="width:${p}%;background:var(--primary)"></i></div>
+        <p class="muted" style="font-size:11px;margin:6px 0 0">${d} / ${t} محطة · ${p}%${s.creditHours?` · 🎯 ${s.creditHours} ساعات`:""}</p>
+      </div></div>`;
+  }).join("")}</div>`}
+  `;
+}
+function subjectDetailView(subjectId){
+  const subject = state.subjects.find(s=>s.id===subjectId);
+  if(!subject) return `<p>غير موجودة</p>`;
+  return `
+  <div class="row" style="margin-bottom:10px">
+    <button onclick="backToSubjects()" style="color:var(--primary);font-weight:700;font-size:13px">‹ رجوع</button>
+    <button onclick="openDeleteSubjectModal('${subjectId}')" style="color:var(--red)">🗑️</button>
+  </div>
+  <h2 class="font-d" style="font-weight:800;font-size:18px;margin:0 0 4px">${subject.emoji} ${esc(subject.name)}</h2>
+  ${subject.creditHours?`<p class="muted" style="font-size:12px;margin:0 0 14px">🎯 ${subject.creditHours} ساعات معتمدة</p>`:`<div style="margin-bottom:14px"></div>`}
+
+  <div class="grid" style="gap:8px">
+    ${subject.chapters.map(c=>{
+      const status = chapterStatus(subject,c);
+      const s = STATUS_COLORS[status];
+      const doneT = c.tasks.filter(t=>t.done).length;
+      return `<div class="card" style="${status==='locked'?'opacity:.55':''}">
+        <div class="row"><p style="margin:0;font-weight:700;font-size:13px">${status==="completed"?"✅":status==="current"?"🚉":"🔒"} ${esc(c.name)}</p>
+          <div style="display:flex;gap:6px;align-items:center">${pill(status)}${status!=="locked"?`<button onclick="openEditChapterModal('${subjectId}','${c.id}')" style="color:var(--blue);font-size:13px">✏️</button>`:""}</div>
+        </div>
+        <p class="muted" style="font-size:11px;margin:4px 0 0">${c.pages?`📄 ${c.pages} صفحة`:""}${c.pages&&c.estMinutes?" · ":""}${c.estMinutes?`⏱️ ${c.estMinutes} دقيقة`:""}${!c.pages&&!c.estMinutes?"لا تفاصيل محددة":""}</p>
+        ${status!=="locked" ? `<div class="bar" style="margin-top:8px"><i style="width:${Math.round(doneT/c.tasks.length*100)}%;background:var(${s.v})"></i></div>` : `<p class="muted-i" style="font-size:11px;margin:6px 0 0">🔒 أكمل المحطة السابقة أولًا</p>`}
+        ${status==="current" ? `
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+            ${c.tasks.map(t=>`<button onclick="toggleTask('${subjectId}','${c.id}','${t.id}')" style="display:flex;align-items:center;gap:8px;text-align:right;font-size:13px">
+              <span>${t.done?"✅":"⬜"}</span><span style="${t.done?'text-decoration:line-through;color:var(--muted-icon)':''}">${esc(t.label)}</span></button>`).join("")}
+          </div>
+          <button class="btn" style="width:100%;justify-content:center;margin-top:10px" ${doneT<c.tasks.length?"disabled":""} onclick="openCompleteChapterModal('${subjectId}','${c.id}')">🚀 إكمال المحطة!</button>
+        ` : status==="completed" ? `<p style="color:var(--green);font-weight:700;font-size:11px;margin:8px 0 0">🎉 اكتملت بتاريخ ${displayDate(c.completedDate)}</p>
+          <button onclick="deleteChapter('${subjectId}','${c.id}')" style="color:var(--red);font-size:11px;margin-top:6px">🗑️ حذف</button>` : ""}
+      </div>`;
+    }).join("")}
+  </div>
+  <button class="btn outline" style="width:100%;justify-content:center;margin-top:12px" onclick="openAddChapterModal('${subjectId}')">➕ إضافة محطة (Chapter)</button>
+  `;
 }
 
-function StatusPill({ status }) {
-  const s = STATUS_COLORS[status];
-  return (
-    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: s.bg, color: s.text }}>
-      {s.label}
-    </span>
-  );
+/* ======================= WEEKS (static) ======================= */
+function weeksView(){
+  const currentWeek = WEEKS.find(w=>todayStr()>=w.start && todayStr()<=w.end);
+  const groups = [];
+  WEEKS.forEach(w=>{ const label=`${gMonth(w.start)} ${gYear(w.start)}`; let g=groups.find(x=>x.label===label); if(!g){g={label,weeks:[]};groups.push(g);} g.weeks.push(w); });
+  return groups.map(g=>`
+    <p class="font-d" style="color:var(--primary);font-weight:800;font-size:13px;margin:14px 2px 8px">🗓️ ${g.label}</p>
+    <div class="grid" style="gap:8px">
+    ${g.weeks.map(w=>{
+      const isCurrent = currentWeek && currentWeek.number===w.number;
+      const isPast = todayStr()>w.end;
+      const badge = isCurrent ? `<span class="pill" style="background:var(--gold);color:#2B2B26">⭐ الحالي</span>` : isPast ? `<span class="pill" style="background:var(--muted-icon);color:#fff">منتهٍ</span>` : `<span class="pill" style="background:var(--blue);color:#fff">قادم</span>`;
+      const count = [0,1,2,3,4,5,6].reduce((s,i)=>s+((state.weeklyLog[addDays(w.start,i)]||[]).length),0);
+      return `<button class="week-card" onclick="openWeek(${w.number})">
+        <div class="card ${isCurrent?'hl':''}">
+          <div class="row"><p style="margin:0;font-weight:700;font-size:13px">الأسبوع ${w.ordinal}</p>${badge}</div>
+          <p class="muted" style="font-size:11px;margin:6px 0 0">${formatRange(w.start,w.end)}</p>
+          <p class="muted-i" style="font-size:10px;margin:2px 0 0">${w.hijri}</p>
+          ${count>0?`<p style="color:var(--green);font-size:10px;font-weight:800;margin:8px 0 0">✍️ ${count} سجلات</p>`:""}
+        </div></button>`;
+    }).join("")}
+    </div>`).join("");
 }
-
-/* -------------------------------- SUBJECTS TAB -------------------------------- */
-
-function SubjectsTab(props) {
-  const { state, activeSubjectId, setActiveSubjectId, addSubject, deleteSubject, addChapter, deleteChapter, toggleTask, completeChapter } = props;
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState("");
-
-  const activeSubject = state.subjects.find((s) => s.id === activeSubjectId);
-
-  if (activeSubject) {
-    return (
-      <SubjectDetail
-        subject={activeSubject}
-        onBack={() => setActiveSubjectId(null)}
-        onDeleteSubject={() => deleteSubject(activeSubject.id)}
-        addChapter={() => addChapter(activeSubject.id)}
-        deleteChapter={(cid) => deleteChapter(activeSubject.id, cid)}
-        toggleTask={(cid, tid) => toggleTask(activeSubject.id, cid, tid)}
-        completeChapter={(cid) => completeChapter(activeSubject.id, cid)}
-      />
-    );
+function weekDetailView(number){
+  const week = WEEKS.find(w=>w.number===number);
+  return `
+  <button onclick="backToWeeks()" style="color:var(--primary);font-weight:700;font-size:13px;margin-bottom:10px;display:block">‹ رجوع للأسابيع</button>
+  <h2 class="font-d" style="font-weight:800;font-size:17px;margin:0">🗓️ الأسبوع ${week.ordinal}</h2>
+  <p class="muted" style="font-size:12px;margin:4px 0 0">${formatRange(week.start,week.end)}</p>
+  <p class="muted-i" style="font-size:11px;margin:2px 0 14px">${week.hijri}</p>
+  <div class="grid">
+  ${WEEKDAYS_AR.map((dayName,i)=>{
+    const dateStr = addDays(week.start,i);
+    const entries = state.weeklyLog[dateStr]||[];
+    const isToday = dateStr===todayStr();
+    return `<button onclick="openDayModal('${dateStr}')" style="text-align:right">
+      <div class="card ${isToday?'hl':''}">
+        <div class="row"><p style="margin:0;font-weight:700;font-size:13px">${dayName} ${isToday?'<span style="color:var(--gold);font-size:10px">👈 اليوم</span>':''}</p><p class="muted-i" style="margin:0;font-size:10px">${gDay(dateStr)} ${gMonth(dateStr)}</p></div>
+        ${entries.length===0 ? `<p class="muted-i" style="font-size:11px;margin:6px 0 0">لم تتم إضافة بيانات</p>` :
+          `<div style="margin-top:6px">${entries.map(e=>{ const subj=state.subjects.find(s=>s.id===e.subjectId); return `<p style="font-size:11px;margin:3px 0"><b>${subj?.emoji||""} ${esc(subj?.name||"—")}</b> — ${esc(e.title)}</p>`; }).join("")}</div>`}
+      </div></button>`;
+  }).join("")}
+  </div>`;
+}
+function openDayModal(dateStr){
+  const entries = state.weeklyLog[dateStr]||[];
+  if(state.subjects.length===0){
+    openModal(modalWrap(displayDate(dateStr), `<div class="empty"><div class="em">📚</div><div class="t">لا توجد مواد بعد</div><div class="s">أضف مادة أولًا من تبويب «المواد».</div></div>`));
+    return;
   }
-
-  return (
-    <div className="px-4 pt-4">
-      <SectionTitle icon={BookOpen}>موادّي</SectionTitle>
-      {state.subjects.length === 0 && <Card><EmptyState text="لم تضف أي مادة بعد" sub="ابدأ بإضافة أول مادة دراسية." /></Card>}
-      <div className="flex flex-col gap-2">
-        {state.subjects.map((s) => {
-          const done = s.chapters.filter((c) => chapterStatus(s, c) === "completed").length;
-          const total = s.chapters.length;
-          const pct = total ? Math.round((done / total) * 100) : 0;
-          return (
-            <Card key={s.id} className="p-0 overflow-hidden">
-              <button className="w-full text-right p-4" onClick={() => setActiveSubjectId(s.id)}>
-                <div className="flex items-center justify-between">
-                  <p className="font-display font-bold text-[15px]">{s.name}</p>
-                  <ChevronLeft size={18} className="text-[#B9B3A4]" />
-                </div>
-                <div className="mt-2 h-1.5 bg-[#F1EEE4] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#1F5C54] rounded-full" style={{ width: `${pct}%` }} />
-                </div>
-                <p className="text-[11px] text-[#8b8677] mt-1">{done} / {total} محطة · {pct}%</p>
-              </button>
-            </Card>
-          );
-        })}
-      </div>
-
-      <button onClick={() => setShowAdd(true)} className="w-full mt-3 border-2 border-dashed border-[#1F5C54]/30 text-[#1F5C54] rounded-2xl py-3 text-sm font-bold flex items-center justify-center gap-1.5">
-        <Plus size={16} /> إضافة مادة جديدة
-      </button>
-
-      {showAdd && (
-        <Modal onClose={() => setShowAdd(false)} title="مادة جديدة">
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="مثال: Pharmacology"
-            className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#1F5C54]"
-          />
-          <button
-            disabled={!name.trim()}
-            onClick={() => { addSubject(name.trim()); setName(""); setShowAdd(false); }}
-            className="w-full mt-3 bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2.5 text-sm font-bold"
-          >
-            إضافة
-          </button>
-        </Modal>
-      )}
-    </div>
-  );
+  const body = `
+  ${entries.length===0 ? `<p class="muted-i" style="text-align:center;padding:10px 0">لم تتم إضافة بيانات لهذا اليوم بعد</p>` :
+    `<div class="grid" style="margin-bottom:12px">${entries.map(e=>{
+      const subj = state.subjects.find(s=>s.id===e.subjectId);
+      return `<div class="card" style="background:var(--track);border:none">
+        <div class="row"><div><p class="muted" style="font-size:11px;margin:0">${subj?.emoji||""} ${esc(subj?.name||"—")}${e.linkedChapterId?` <span style="color:var(--primary)">· 🚉 مرتبطة</span>`:""}</p>
+        <p style="font-weight:700;margin:2px 0;font-size:13px">${esc(e.title)}</p>
+        ${e.description?`<p class="muted" style="font-size:11px;margin:2px 0">${esc(e.description)}</p>`:""}
+        ${e.pages?`<p class="muted-i" style="font-size:10px;margin:2px 0">📄 ${e.pages} صفحة</p>`:""}
+        ${e.notes?`<p class="muted-i" style="font-size:10px;margin:2px 0">📝 ${esc(e.notes)}</p>`:""}</div>
+        <div style="display:flex;gap:8px"><button onclick="openDayEntryForm('${dateStr}','${e.id}')" style="color:var(--blue)">✏️</button><button onclick="deleteDayEntry('${dateStr}','${e.id}')" style="color:var(--red)">🗑️</button></div></div>
+      </div>`;
+    }).join("")}</div>`}
+  <button class="btn outline" style="width:100%;justify-content:center" onclick="openDayEntryForm('${dateStr}',null)">➕ إضافة ما تم أخذه</button>
+  `;
+  openModal(modalWrap(displayDate(dateStr), body));
+}
+function openDayEntryForm(dateStr, editingId){
+  const entry = editingId ? (state.weeklyLog[dateStr]||[]).find(e=>e.id===editingId) : null;
+  const body = `
+  <div class="field"><label>المادة</label><select id="f-day-subject">${state.subjects.map(s=>`<option value="${s.id}" ${entry?.subjectId===s.id?"selected":""}>${s.emoji} ${esc(s.name)}</option>`).join("")}</select></div>
+  <div class="field"><label>اسم المحاضرة أو Chapter</label><input id="f-day-title" value="${esc(entry?.title||"")}" placeholder="مثال: Chapter 2"></div>
+  <div class="field"><label>وصف مختصر لما تم شرحه</label><textarea id="f-day-desc" rows="2">${esc(entry?.description||"")}</textarea></div>
+  <div class="field"><label>عدد الصفحات</label><input id="f-day-pages" type="number" min="0" value="${entry?.pages||""}"></div>
+  <div class="field"><label>ملاحظات (اختياري)</label><textarea id="f-day-notes" rows="2">${esc(entry?.notes||"")}</textarea></div>
+  <label class="row" style="background:var(--track);border-radius:12px;padding:10px;font-size:12px;margin-bottom:12px"><span>🚉 ربط هذا العنوان كمحطة (Chapter) في المادة</span><input type="checkbox" id="f-day-link" ${entry?entry.linkedChapterId?"checked":"":"checked"}></label>
+  <button class="btn" style="width:100%;justify-content:center" onclick="saveDayEntrySubmit('${dateStr}',${editingId?`'${editingId}'`:null})">💾 حفظ</button>
+  `;
+  openModal(modalWrap(editingId?"تعديل السجل":"✏️ إضافة ما تم أخذه", body));
 }
 
-function SubjectDetail({ subject, onBack, onDeleteSubject, addChapter, deleteChapter, toggleTask, completeChapter }) {
-  const [openChapterId, setOpenChapterId] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  return (
-    <div className="px-4 pt-4">
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={onBack} className="flex items-center gap-1 text-[#1F5C54] text-sm font-bold">
-          <ChevronLeft size={16} className="rotate-180" /> رجوع
-        </button>
-        <button onClick={() => setConfirmDelete(true)} className="text-[#C4593F]">
-          <Trash2 size={17} />
-        </button>
-      </div>
-      <h2 className="font-display font-extrabold text-lg mb-4">{subject.name}</h2>
-
-      {/* metro line */}
-      <div className="relative pr-5">
-        <div className="absolute right-[9px] top-2 bottom-2 w-[3px] bg-[#E9E4D8] rounded-full" />
-        <div className="flex flex-col gap-1">
-          {subject.chapters.map((c) => {
-            const status = chapterStatus(subject, c);
-            const colors = STATUS_COLORS[status];
-            const isOpen = openChapterId === c.id;
-            const doneTasks = c.tasks.filter((t) => t.done).length;
-            return (
-              <div key={c.id} className="relative pb-3">
-                <div
-                  className={`absolute right-0 top-1 w-5 h-5 rounded-full flex items-center justify-center ${status === "current" ? "pulse-current" : ""}`}
-                  style={{ background: colors.bg }}
-                >
-                  {status === "completed" && <CheckCircle2 size={13} color="#fff" />}
-                  {status === "locked" && <Lock size={10} color="#fff" />}
-                </div>
-                <button
-                  onClick={() => status !== "locked" && setOpenChapterId(isOpen ? null : c.id)}
-                  className="w-full text-right mr-8 bg-white rounded-2xl p-3 shadow-sm disabled:opacity-60"
-                  disabled={status === "locked"}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="font-display font-bold text-sm">{c.name}</p>
-                    <StatusPill status={status} />
-                  </div>
-                  {status !== "locked" && (
-                    <div className="mt-2 h-1.5 bg-[#F1EEE4] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.round((doneTasks / c.tasks.length) * 100)}%`, background: colors.bg }} />
-                    </div>
-                  )}
-                  {status === "locked" && <p className="text-[11px] text-[#B9B3A4] mt-1">أكمل المحطة السابقة أولًا</p>}
-                </button>
-
-                {isOpen && status !== "locked" && (
-                  <div className="mr-8 mt-2 bg-[#F6F3EC] rounded-2xl p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[11px] text-[#8b8677] flex items-center gap-1"><Clock size={12} /> {c.estMinutes} دقيقة متوقعة</p>
-                      <button onClick={() => deleteChapter(c.id)} className="text-[#C4593F]"><Trash2 size={14} /></button>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      {c.tasks.map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => toggleTask(c.id, t.id)}
-                          disabled={status === "completed"}
-                          className="flex items-center gap-2 text-right text-sm py-1"
-                        >
-                          {t.done ? <CheckCircle2 size={17} className="text-[#6FA287] shrink-0" /> : <Circle size={17} className="text-[#B9B3A4] shrink-0" />}
-                          <span className={t.done ? "line-through text-[#B9B3A4]" : ""}>{t.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {status === "current" && (
-                      <button
-                        onClick={() => completeChapter(c.id)}
-                        disabled={doneTasks < c.tasks.length}
-                        className="w-full mt-3 bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2 text-sm font-bold flex items-center justify-center gap-1.5"
-                      >
-                        <TrainFront size={15} /> إكمال المحطة
-                      </button>
-                    )}
-                    {status === "completed" && (
-                      <p className="text-[11px] text-[#6FA287] mt-2 font-bold">اكتملت بتاريخ {humanDate(c.completedDate)}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <button onClick={addChapter} className="w-full mt-1 border-2 border-dashed border-[#1F5C54]/30 text-[#1F5C54] rounded-2xl py-2.5 text-sm font-bold flex items-center justify-center gap-1.5">
-        <Plus size={16} /> إضافة محطة (Chapter)
-      </button>
-
-      {confirmDelete && (
-        <Modal onClose={() => setConfirmDelete(false)} title="حذف المادة">
-          <p className="text-sm text-[#8b8677] mb-3">سيتم حذف "{subject.name}" وكل محطاتها ومراجعاتها. هل أنت متأكد؟</p>
-          <div className="flex gap-2">
-            <button onClick={() => setConfirmDelete(false)} className="flex-1 bg-[#F1EEE4] rounded-xl py-2.5 text-sm font-bold">إلغاء</button>
-            <button onClick={onDeleteSubject} className="flex-1 bg-[#C4593F] text-white rounded-xl py-2.5 text-sm font-bold">حذف</button>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-/* -------------------------------- REVIEWS TAB -------------------------------- */
-
-function ReviewsTab({ allReviewsFlat, toggleReview }) {
-  const due = allReviewsFlat.filter((x) => x.status === "due");
-  const late = allReviewsFlat.filter((x) => x.status === "late");
-  const upcoming = allReviewsFlat.filter((x) => x.status === "upcoming").sort((a, b) => a.review.date.localeCompare(b.review.date)).slice(0, 12);
-  const completed = allReviewsFlat.filter((x) => x.status === "completed");
-
-  const Row = ({ item, showDate }) => (
-    <div className="flex items-center justify-between border-b border-[#F1EEE4] last:border-0 py-2.5">
-      <button
-        className="flex items-center gap-2 text-right flex-1"
-        onClick={() => toggleReview(item.subject.id, item.chapter.id, item.review.id)}
-      >
-        {item.status === "completed" ? (
-          <CheckCircle2 size={18} className="text-[#6FA287] shrink-0" />
-        ) : (
-          <Circle size={18} className="text-[#B9B3A4] shrink-0" />
-        )}
-        <span>
-          <p className={`text-sm font-bold ${item.status === "completed" ? "line-through text-[#B9B3A4]" : ""}`}>{item.chapter.name}</p>
-          <p className="text-[11px] text-[#8b8677]">{item.subject.name}{showDate ? ` · ${humanDate(item.review.date)}` : ""}</p>
-        </span>
-      </button>
-      <StatusPill status={item.status} />
-    </div>
-  );
-
-  return (
-    <div className="px-4 pt-4 flex flex-col gap-4">
-      {late.length > 0 && (
-        <div>
-          <SectionTitle icon={AlertTriangle}>مراجعات متأخرة</SectionTitle>
-          <Card>{late.map((x) => <Row key={x.review.id} item={x} showDate />)}</Card>
-        </div>
-      )}
-
-      <div>
-        <SectionTitle icon={RotateCw}>مراجعات اليوم</SectionTitle>
-        {due.length === 0 ? (
-          <Card><p className="text-sm text-[#8b8677] text-center py-2">لا توجد مراجعات مستحقة اليوم 🎉</p></Card>
-        ) : (
-          <Card>{due.map((x) => <Row key={x.review.id} item={x} />)}</Card>
-        )}
-      </div>
-
-      <div>
-        <SectionTitle icon={CalendarDays}>المراجعات القادمة</SectionTitle>
-        {upcoming.length === 0 ? (
-          <Card><EmptyState text="لا توجد مراجعات قادمة بعد" /></Card>
-        ) : (
-          <Card>{upcoming.map((x) => <Row key={x.review.id} item={x} showDate />)}</Card>
-        )}
-      </div>
-
-      {completed.length > 0 && (
-        <p className="text-center text-[11px] text-[#B9B3A4]">{completed.length} مراجعة مكتملة إجمالًا</p>
-      )}
-    </div>
-  );
-}
-
-/* -------------------------------- PLAN TAB (tests + calendar + smart distribution) -------------------------------- */
-
-function PlanTab({ state, allTestsFlat, addTest, deleteTest, allReviewsFlat }) {
-  const [showAddTest, setShowAddTest] = useState(false);
-  const [showSmart, setShowSmart] = useState(false);
-
-  // agenda: merge upcoming reviews + tests over next 21 days
-  const horizon = 21;
-  const agendaMap = {};
-  allReviewsFlat.forEach((x) => {
-    if (x.status === "completed") return;
-    const diff = daysBetween(todayStr(), x.review.date);
-    if (diff >= 0 && diff <= horizon) {
-      agendaMap[x.review.date] = agendaMap[x.review.date] || [];
-      agendaMap[x.review.date].push({ type: "review", label: `${x.chapter.name} — ${x.subject.name}`, status: x.status });
-    }
+/* ======================= TIMETABLE (image-style grid, Sun–Thu, lecture kind) ======================= */
+const TT_START=7, TT_END=22, ROW_H=48;
+const TT_DAYS = [0,1,2,3,4]; // Sunday .. Thursday only
+function timetableView(){
+  if(state.subjects.length===0) return `<div class="card"><div class="empty"><div class="em">📘</div><div class="t">أضف مادة أولًا</div><div class="s">لتتمكن من بناء جدولك الدراسي.</div></div></div>`;
+  const totalH = (TT_END-TT_START)*ROW_H;
+  let hourRows = "";
+  for(let h=TT_START; h<TT_END; h++){ hourRows += `<div class="tt-hourline tt-timelabel" style="top:${(h-TT_START)*ROW_H}px;height:${ROW_H}px">${pad(h)}:00 - ${pad(h+1)}:00</div>`; }
+  let cols = "";
+  TT_DAYS.forEach((d,ci)=>{
+    const slots = (state.timetable[d]||[]).slice().sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+    let lines = "";
+    for(let h=TT_START; h<=TT_END; h++){ lines += `<div class="tt-hourline" style="top:${(h-TT_START)*ROW_H}px"></div>`; }
+    let blocks = slots.map(s=>{
+      const subj = state.subjects.find(x=>x.id===s.subjectId); if(!subj) return "";
+      const pastel = subjectPastel(subj.color);
+      const top = Math.max(0,(timeToMin(s.start||"08:00") - TT_START*60)/60*ROW_H);
+      const height = Math.max(((timeToMin(s.end||"09:00")-timeToMin(s.start||"08:00"))/60)*ROW_H - 3, 26);
+      const kindTag = s.kind==="عملي" ? "🧪 عملي" : "📖 نظري";
+      return `<button class="tt-block" onclick="openSlotForm(${d},'${s.id}')" style="top:${top}px;height:${height}px;background:${pastel.bg};border-color:${pastel.border};color:var(--text)">
+        <b>${esc(subj.name)}</b><span>${fmtTime(s.start)}-${fmtTime(s.end)}</span><span>${kindTag}</span></button>`;
+    }).join("");
+    cols += `<div class="tt-col ${ci%2===0?'zebra':''}" style="height:${totalH}px">${lines}${blocks}</div>`;
   });
-  allTestsFlat.forEach((x) => {
-    const diff = daysBetween(todayStr(), x.test.date);
-    if (diff >= 0 && diff <= horizon) {
-      agendaMap[x.test.date] = agendaMap[x.test.date] || [];
-      agendaMap[x.test.date].push({ type: "test", label: `${x.test.name} — ${x.subject.name}`, status: "test" });
-    }
+  return `
+  <div class="tt-wrap"><div class="tt-grid" style="grid-template-columns:64px repeat(5,1fr)">
+    <div class="tt-head"></div>
+    ${TT_DAYS.map(d=>`<div class="tt-head">${WEEKDAYS_AR[d]}</div>`).join("")}
+    <div style="position:relative;height:${totalH}px">${hourRows}</div>
+    ${cols}
+  </div></div>
+  <div class="tt-addrow">${TT_DAYS.map(d=>`<button class="tt-addbtn" onclick="openSlotForm(${d},null)">➕ ${WEEKDAYS_AR[d]}</button>`).join("")}</div>
+  `;
+}
+function openSlotForm(dayIdx, slotId){
+  const slot = slotId ? (state.timetable[dayIdx]||[]).find(s=>s.id===slotId) : null;
+  const body = `
+  <div class="field"><label>المادة</label><select id="f-slot-subject">${state.subjects.map(s=>`<option value="${s.id}" ${slot?.subjectId===s.id?"selected":""}>${s.emoji} ${esc(s.name)}</option>`).join("")}</select></div>
+  <div class="field"><label>نوع المحاضرة</label><select id="f-slot-kind"><option value="نظري" ${slot?.kind!=="عملي"?"selected":""}>📖 نظري</option><option value="عملي" ${slot?.kind==="عملي"?"selected":""}>🧪 عملي</option></select></div>
+  <div class="two-col">
+    <div class="field"><label>من الساعة</label><input id="f-slot-start" type="time" value="${slot?.start||"08:00"}"></div>
+    <div class="field"><label>إلى الساعة</label><input id="f-slot-end" type="time" value="${slot?.end||"09:00"}"></div>
+  </div>
+  <div class="field"><label>ملاحظة (اختياري)</label><input id="f-slot-label" value="${esc(slot?.label||"")}" placeholder="مثال: قاعة 204"></div>
+  <div class="row" style="gap:8px">
+    <button class="btn" style="flex:1;justify-content:center" onclick="saveSlotSubmit(${dayIdx}${slotId?`,'${slotId}'`:',null'})">💾 حفظ</button>
+    ${slotId?`<button class="btn danger" onclick="deleteSlot(${dayIdx},'${slotId}')">🗑️</button>`:""}
+  </div>`;
+  openModal(modalWrap(`📘 حصة يوم ${WEEKDAYS_AR[dayIdx]}`, body));
+}
+
+/* ======================= CALENDAR (month + list, custom events, test linking) ======================= */
+function calendarView(){
+  const seg = `<div class="section-title">
+    <div class="seg" style="max-width:220px"><button class="${ui.calMode==='month'?'on':''}" onclick="setCalMode('month')">📅 شهري</button><button class="${ui.calMode==='list'?'on':''}" onclick="setCalMode('list')">📋 قائمة</button></div>
+    <button class="btn sm" onclick="openAddEventModal()">➕ إضافة حدث</button>
+  </div>`;
+  return seg + (ui.calMode==="list" ? calendarListView() : calendarMonthView());
+}
+function calendarMonthView(){
+  const monthLabel = `${MONTHS_AR[calCursor.m]} ${calCursor.y}`;
+  const firstDow = new Date(calCursor.y, calCursor.m, 1).getDay();
+  const daysInMonth = new Date(calCursor.y, calCursor.m+1, 0).getDate();
+  const cells = [...Array(firstDow).fill(null), ...Array.from({length:daysInMonth},(_,i)=>`${calCursor.y}-${pad(calCursor.m+1)}-${pad(i+1)}`)];
+  return `
+  <div class="card">
+    <div class="cal-head"><button onclick="calPrev()" style="color:var(--primary);font-size:16px">›</button><p class="font-d" style="font-weight:800;margin:0;font-size:14px">${monthLabel}</p><button onclick="calNext()" style="color:var(--primary);font-size:16px">‹</button></div>
+    <div class="cal-grid" style="margin-bottom:4px">${WEEKDAYS_AR.map(d=>`<div class="cal-dow">${d.slice(0,3)}</div>`).join("")}</div>
+    <div class="cal-grid">${cells.map(dateStr=>{
+      if(!dateStr) return `<div></div>`;
+      const evs = dayEvents(dateStr);
+      const cats = [...new Set(evs.map(e=>e.type))].slice(0,4);
+      const isToday = dateStr===todayStr();
+      return `<button class="cal-cell ${isToday?'today':''}" onclick="openDayEventsModal('${dateStr}')"><span>${gDay(dateStr)}</span><div class="cal-dots">${cats.map(c=>`<i style="background:var(${EVENT_COLORS[c].v})"></i>`).join("")}</div></button>`;
+    }).join("")}</div>
+  </div>`;
+}
+function calendarListView(){
+  const from = addDays(todayStr(),-7), to = addDays(todayStr(),60);
+  const map = {};
+  let d = from;
+  while(d<=to){ const evs = dayEvents(d); if(evs.length) map[d]=evs; d = addDays(d,1); }
+  const dates = Object.keys(map).sort();
+  if(dates.length===0) return `<div class="card"><div class="empty"><div class="em">📋</div><div class="t">لا توجد أحداث قريبة</div></div></div>`;
+  return `<div class="grid">${dates.map(dt=>`<div class="card"><p style="color:var(--primary);font-weight:800;font-size:12px;margin:0 0 8px">${displayDate(dt)}</p>
+    ${map[dt].map(e=>`<div class="row" style="justify-content:flex-start;gap:8px;margin-bottom:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(${EVENT_COLORS[e.type].v});flex-shrink:0"></span><span style="font-size:13px">${esc(e.label)}</span></div>`).join("")}
+    </div>`).join("")}</div>`;
+}
+function calPrev(){ calCursor = calCursor.m===0?{y:calCursor.y-1,m:11}:{y:calCursor.y,m:calCursor.m-1}; render(); }
+function calNext(){ calCursor = calCursor.m===11?{y:calCursor.y+1,m:0}:{y:calCursor.y,m:calCursor.m+1}; render(); }
+function dayEvents(dateStr){
+  const evs = [];
+  KEY_DATES.forEach(kd=>{ if(dateStr>=kd.start && dateStr<=kd.end) evs.push({type:kd.type,label:`${kd.emoji} ${kd.title}`}); });
+  allTestsFlat().forEach(x=>{ if(x.test.date===dateStr) evs.push({type:"test",label:`🏁 ${x.test.name} — ${x.subject.name}`, testId:x.test.id, subjectId:x.subject.id}); });
+  (state.weeklyLog[dateStr]||[]).forEach(e=>{ const subj=state.subjects.find(s=>s.id===e.subjectId); evs.push({type:"lecture",label:`📘 ${e.title} — ${subj?.name||""}`}); });
+  allReviewsFlat().forEach(x=>{ if(x.review.date===dateStr) evs.push({type:"reminder",label:`🔔 مراجعة ${x.chapter.name} — ${x.subject.name}`}); });
+  state.customEvents.forEach(e=>{ if(e.date===dateStr) evs.push({type:e.type,label:`${EVENT_COLORS[e.type].label.split(" ")[0]} ${e.title}`, customId:e.id}); });
+  return evs;
+}
+function openDayEventsModal(dateStr){
+  const evs = dayEvents(dateStr);
+  const body = `
+  ${evs.length===0 ? `<p class="muted-i" style="text-align:center;padding:14px 0">لا توجد أحداث هذا اليوم</p>` :
+    `<div class="grid" style="margin-bottom:12px">${evs.map(e=>`<div class="row" style="background:var(--track);border-radius:12px;padding:10px">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(${EVENT_COLORS[e.type].v});flex-shrink:0"></span>
+      <span style="flex:1;font-size:13px">${esc(e.label)}</span>
+      ${e.testId?`<button onclick="openTestForm('${e.testId}')" style="color:var(--blue)">✏️</button>`:""}
+      ${e.customId?`<button onclick="deleteCustomEvent('${e.customId}');openDayEventsModal('${dateStr}')" style="color:var(--red)">🗑️</button>`:""}
+    </div>`).join("")}</div>`}
+  <button class="btn outline" style="width:100%;justify-content:center" onclick="openAddEventModal('${dateStr}')">➕ إضافة حدث لهذا اليوم</button>
+  `;
+  openModal(modalWrap(displayDate(dateStr), body));
+}
+function openAddEventModal(dateStr){
+  const body = `
+  <div class="field"><label>العنوان</label><input id="f-ev-title" placeholder="مثال: تسليم بحث"></div>
+  <div class="field"><label>التاريخ</label><input id="f-ev-date" type="date" value="${dateStr||todayStr()}"></div>
+  <div class="field"><label>النوع</label><select id="f-ev-type">${EVENT_TYPE_OPTIONS.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
+  <button class="btn" style="width:100%;justify-content:center" onclick="saveEventSubmit()">➕ إضافة الحدث</button>
+  `;
+  openModal(modalWrap("🗓️ حدث جديد", body));
+}
+
+/* ======================= REVIEWS (simpler & clearer) ======================= */
+function reviewsView(){
+  const all = allReviewsFlat();
+  const late = all.filter(x=>x.status==="late"), due = all.filter(x=>x.status==="due");
+  const upcoming = all.filter(x=>x.status==="upcoming").sort((a,b)=>a.review.date.localeCompare(b.review.date)).slice(0,15);
+  const completed = all.filter(x=>x.status==="completed");
+  const totalActive = late.length+due.length+upcoming.length+completed.length;
+
+  const row = (x)=>`<div class="row" style="background:var(--track);border-radius:14px;padding:10px 12px">
+    <button onclick="toggleReview('${x.subject.id}','${x.chapter.id}','${x.review.id}')" class="rev-check ${x.status==='completed'?'done':''}">${x.status==='completed'?"✔":""}</button>
+    <div style="flex:1;min-width:0">
+      <p style="margin:0;font-weight:700;font-size:13px;${x.status==='completed'?'text-decoration:line-through;color:var(--muted-icon)':''}">${esc(x.chapter.name)}</p>
+      <p class="muted" style="margin:2px 0 0;font-size:11px">${x.subject.emoji} ${esc(x.subject.name)} · ${displayDate(x.review.date)}</p>
+    </div>
+    ${pill(x.status)}
+  </div>`;
+
+  return `
+  <div class="card" style="background:var(--primary);color:#fff;text-align:center;padding:16px;margin-bottom:14px">
+    <p style="opacity:.7;font-size:11px;margin:0">✅ مكتملة من إجمالي المراجعات النشطة</p>
+    <p class="font-d" style="font-size:24px;font-weight:800;margin:4px 0">${completed.length} / ${totalActive}</p>
+  </div>
+  ${late.length>0?`<div class="section-title"><h2>⚠️ مراجعات متأخرة</h2></div><div class="grid">${late.map(row).join("")}</div>`:""}
+  <div class="section-title"><h2>🔥 مراجعات اليوم</h2></div>
+  ${due.length===0?`<div class="card"><p class="muted" style="text-align:center;margin:6px 0">لا توجد مراجعات مستحقة اليوم 🎉</p></div>`:`<div class="grid">${due.map(row).join("")}</div>`}
+  <div class="section-title"><h2>📅 المراجعات القادمة</h2></div>
+  ${upcoming.length===0?`<div class="card"><div class="empty"><div class="em">📅</div><div class="t">لا توجد مراجعات قادمة بعد</div></div></div>`:`<div class="grid">${upcoming.map(row).join("")}</div>`}
+  `;
+}
+
+/* ======================= PLAN ======================= */
+function planView(){
+  const tests = allTestsFlat();
+  const horizon=21; const agenda={};
+  allReviewsFlat().forEach(x=>{ if(x.status==="completed") return; const diff=daysBetween(todayStr(),x.review.date); if(diff>=0&&diff<=horizon){ (agenda[x.review.date]=agenda[x.review.date]||[]).push({type:"reminder",label:`${x.chapter.name} — ${x.subject.name}`}); } });
+  tests.forEach(x=>{ const diff=daysBetween(todayStr(),x.test.date); if(diff>=0&&diff<=horizon){ (agenda[x.test.date]=agenda[x.test.date]||[]).push({type:"test",label:`${x.test.name} — ${x.subject.name}`}); } });
+  const dates = Object.keys(agenda).sort();
+
+  return `
+  <div class="section-title"><h2>🏁 الاختبارات</h2><button class="btn sm" ${state.subjects.length===0?"disabled":""} onclick="openTestForm(null)">➕ اختبار</button></div>
+  ${tests.length===0?`<div class="card"><div class="empty"><div class="em">🏁</div><div class="t">لا توجد اختبارات مضافة</div><div class="s">${state.subjects.length===0?"أضف مادة أولًا.":"اضغط «➕ اختبار» أعلاه."}</div></div></div>`:
+  `<div class="grid">${tests.map(({subject,test})=>{
+    const dLeft = daysBetween(todayStr(),test.date);
+    const rangeLabel = chapterRangeLabel(subject, test.fromChapterId, test.toChapterId);
+    return `<div class="card row">
+      <div><p class="muted" style="margin:0;font-size:11px">${subject.emoji} ${esc(subject.name)}${rangeLabel?` · ${esc(rangeLabel)}`:""}</p><p class="font-d" style="margin:2px 0;font-weight:800;font-size:13px">${esc(test.name)}</p><p class="muted" style="margin:0;font-size:11px">${displayDate(test.date)}</p></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="background:var(--track);border-radius:12px;padding:6px 10px;text-align:center"><p class="font-d" style="font-weight:800;color:var(--purple);margin:0;font-size:13px">${dLeft>=0?dLeft:"—"}</p><p class="muted" style="margin:0;font-size:9px">يوم</p></div>
+        <button onclick="openTestForm('${test.id}')" style="color:var(--blue)">✏️</button>
+        <button onclick="deleteTest('${subject.id}','${test.id}')" style="color:var(--red)">🗑️</button>
+      </div></div>`;
+  }).join("")}</div>`}
+
+  <div class="section-title"><h2>🧠 المخطط الذكي</h2></div>
+  <div class="card"><p class="muted" style="font-size:12px;margin:0 0 10px">يوزّع المحطات المتبقية، ويضيف أيام مراجعة وأيام حل أسئلة وتثبيت قبل الاختبار.</p>
+  <button class="btn" style="width:100%;justify-content:center" ${tests.length===0?"disabled":""} onclick="openSmartPlanModal()">✨ إنشاء خطة توزيع</button></div>
+
+  <div class="section-title"><h2>📅 الأيام القادمة</h2></div>
+  ${dates.length===0?`<div class="card"><div class="empty"><div class="em">📅</div><div class="t">لا توجد أحداث خلال الأسابيع القادمة</div></div></div>`:
+  `<div class="grid">${dates.map(d=>`<div class="card"><p style="color:var(--primary);font-weight:800;font-size:12px;margin:0 0 6px">${displayDate(d)}</p>
+    ${agenda[d].map(e=>`<div class="row" style="justify-content:flex-start;gap:8px;margin-bottom:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(${EVENT_COLORS[e.type].v})"></span><span style="font-size:13px">${esc(e.label)}</span></div>`).join("")}</div>`).join("")}</div>`}
+  `;
+}
+function openTestForm(editingId){
+  const all = allTestsFlat(); const existing = editingId ? all.find(x=>x.test.id===editingId) : null;
+  const subjectId = existing ? existing.subject.id : state.subjects[0]?.id;
+  const subject = state.subjects.find(s=>s.id===subjectId);
+  const chapOptions = (subj)=> subj ? subj.chapters.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("") : "";
+  const body = `
+  <div class="field"><label>المادة</label><select id="f-test-subject" onchange="refreshTestChapterOptions()">${state.subjects.map(s=>`<option value="${s.id}" ${s.id===subjectId?"selected":""}>${s.emoji} ${esc(s.name)}</option>`).join("")}</select></div>
+  <div class="field"><label>اسم الاختبار</label><input id="f-test-name" value="${esc(existing?.test.name||"")}" placeholder="مثال: Pharmacology Quiz 1"></div>
+  <div class="field"><label>التاريخ</label><input id="f-test-date" type="date" value="${existing?.test.date||todayStr()}"></div>
+  <div class="two-col">
+    <div class="field"><label>من محطة</label><select id="f-test-from">${chapOptions(subject)}</select></div>
+    <div class="field"><label>إلى محطة</label><select id="f-test-to">${chapOptions(subject)}</select></div>
+  </div>
+  <button class="btn" style="width:100%;justify-content:center" onclick="saveTestSubmit(${editingId?`'${editingId}'`:null})">${editingId?"💾 حفظ التعديل":"➕ إضافة الاختبار"}</button>
+  `;
+  openModal(modalWrap(editingId?"✏️ تعديل اختبار":"🏁 اختبار جديد", body));
+  if(existing){ setTimeout(()=>{ const f=document.getElementById('f-test-from'), t=document.getElementById('f-test-to'); if(f) f.value = existing.test.fromChapterId||""; if(t) t.value = existing.test.toChapterId||""; },0); }
+}
+function refreshTestChapterOptions(){
+  const subjectId = document.getElementById('f-test-subject').value;
+  const subject = state.subjects.find(s=>s.id===subjectId);
+  const opts = subject.chapters.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  document.getElementById('f-test-from').innerHTML = opts;
+  document.getElementById('f-test-to').innerHTML = opts;
+}
+function openSmartPlanModal(){
+  const tests = allTestsFlat();
+  const body = `
+  <div class="field"><label>اختر الاختبار</label><select id="f-plan-test" onchange="renderSmartPlanBody()">${tests.map(x=>`<option value="${x.subject.id}:${x.test.id}">${esc(x.test.name)} (${esc(x.subject.name)})</option>`).join("")}</select></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;margin-bottom:10px">
+    <span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary)"></i> محطة جديدة</span>
+    <span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--yellow)"></i> مراجعة</span>
+    <span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></i> حل أسئلة وتثبيت</span>
+  </div>
+  <div id="smart-plan-body"></div>
+  `;
+  openModal(modalWrap("✨ خطة توزيع ذكية", body));
+  renderSmartPlanBody();
+}
+function renderSmartPlanBody(){
+  const el = document.getElementById('smart-plan-body'); if(!el) return;
+  const val = document.getElementById('f-plan-test').value;
+  const [subjectId, testId] = val.split(":");
+  const subject = state.subjects.find(s=>s.id===subjectId);
+  const test = subject.tests.find(t=>t.id===testId);
+  const today = todayStr();
+  const days = Math.max(daysBetween(today, test.date), 1);
+  const remaining = subject.chapters.filter(c=>chapterStatus(subject,c)!=="completed");
+  const dayMap = {};
+  remaining.forEach((c,i)=>{
+    const idx = remaining.length>1 ? Math.round((i*(days-1)*0.7)/(remaining.length-1)) : 0;
+    const date = addDays(today, Math.min(idx, days-1));
+    (dayMap[date]=dayMap[date]||[]).push({type:"station",label:`🚉 ${c.name}`});
   });
-  const agendaDates = Object.keys(agendaMap).sort();
-
-  return (
-    <div className="px-4 pt-4 flex flex-col gap-4">
-      <div>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2">
-            <Flag size={17} className="text-[#1F5C54]" />
-            <h2 className="font-display font-bold text-[15px]">الاختبارات</h2>
-          </div>
-          <button onClick={() => setShowAddTest(true)} disabled={state.subjects.length === 0} className="text-[#1F5C54] disabled:text-[#B9B3A4]">
-            <Plus size={19} />
-          </button>
-        </div>
-        {allTestsFlat.length === 0 ? (
-          <Card><EmptyState text="لا توجد اختبارات مضافة" sub={state.subjects.length === 0 ? "أضف مادة أولًا." : "اضغط + لإضافة اختبار."} /></Card>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {allTestsFlat.map(({ subject, test }) => {
-              const dLeft = daysBetween(todayStr(), test.date);
-              return (
-                <Card key={test.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] text-[#8b8677]">{subject.name} · {test.chapterRange || "—"}</p>
-                    <p className="font-display font-bold text-sm">{test.name}</p>
-                    <p className="text-[11px] text-[#8b8677] mt-0.5">{humanDate(test.date)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-center bg-[#F6F3EC] rounded-xl px-2.5 py-1.5">
-                      <p className="font-display font-extrabold text-sm text-[#C4593F]">{dLeft >= 0 ? dLeft : "—"}</p>
-                      <p className="text-[9px] text-[#8b8677]">يوم</p>
-                    </div>
-                    <button onClick={() => deleteTest(subject.id, test.id)} className="text-[#C4593F]"><Trash2 size={15} /></button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2">
-            <Sparkles size={17} className="text-[#1F5C54]" />
-            <h2 className="font-display font-bold text-[15px]">المخطط الذكي</h2>
-          </div>
-        </div>
-        <Card>
-          <p className="text-xs text-[#8b8677] mb-3">وزّع المحطات المتبقية تلقائيًا على الأيام المتاحة قبل موعد اختبار.</p>
-          <button
-            onClick={() => setShowSmart(true)}
-            disabled={allTestsFlat.length === 0}
-            className="w-full bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2.5 text-sm font-bold"
-          >
-            إنشاء خطة توزيع
-          </button>
-        </Card>
-      </div>
-
-      <div>
-        <SectionTitle icon={CalendarDays}>التقويم — الأيام القادمة</SectionTitle>
-        {agendaDates.length === 0 ? (
-          <Card><EmptyState text="لا توجد أحداث خلال الأسابيع القادمة" /></Card>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {agendaDates.map((date) => (
-              <Card key={date}>
-                <p className="text-xs font-bold text-[#1F5C54] mb-2">{humanDate(date)}</p>
-                <div className="flex flex-col gap-1.5">
-                  {agendaMap[date].map((ev, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ev.type === "test" ? "#C4593F" : STATUS_COLORS[ev.status].dot }} />
-                      <span>{ev.type === "test" ? "🔴 " : "🔄 "}{ev.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {showAddTest && <AddTestModal subjects={state.subjects} onClose={() => setShowAddTest(false)} onAdd={addTest} />}
-      {showSmart && <SmartPlanModal state={state} allTestsFlat={allTestsFlat} onClose={() => setShowSmart(false)} />}
-    </div>
-  );
-}
-
-function AddTestModal({ subjects, onClose, onAdd }) {
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id || "");
-  const [name, setName] = useState("");
-  const [date, setDate] = useState(todayStr());
-  const [range, setRange] = useState("");
-
-  return (
-    <Modal onClose={onClose} title="اختبار جديد">
-      <div className="flex flex-col gap-3">
-        <div>
-          <label className="text-xs text-[#8b8677]">المادة</label>
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1">
-            {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-[#8b8677]">اسم الاختبار</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: Pharmacology Quiz 1" className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1" />
-        </div>
-        <div>
-          <label className="text-xs text-[#8b8677]">التاريخ</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1" />
-        </div>
-        <div>
-          <label className="text-xs text-[#8b8677]">النطاق (اختياري)</label>
-          <input value={range} onChange={(e) => setRange(e.target.value)} placeholder="مثال: Chapter 1 - 5" className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1" />
-        </div>
-        <button
-          disabled={!name.trim() || !subjectId}
-          onClick={() => { onAdd(subjectId, { name: name.trim(), date, chapterRange: range.trim() }); onClose(); }}
-          className="w-full bg-[#1F5C54] disabled:bg-[#B9B3A4] text-white rounded-xl py-2.5 text-sm font-bold mt-1"
-        >
-          إضافة الاختبار
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-function SmartPlanModal({ state, allTestsFlat, onClose }) {
-  const [testKey, setTestKey] = useState(allTestsFlat[0] ? `${allTestsFlat[0].subject.id}:${allTestsFlat[0].test.id}` : "");
-  const selected = allTestsFlat.find((x) => `${x.subject.id}:${x.test.id}` === testKey);
-
-  let plan = [];
-  if (selected) {
-    const subject = selected.subject;
-    const remaining = subject.chapters.filter((c) => chapterStatus(subject, c) !== "completed");
-    const days = Math.max(daysBetween(todayStr(), selected.test.date), 1);
-    remaining.forEach((c, i) => {
-      const dayIndex = remaining.length > 1 ? Math.round((i * (days - 1)) / (remaining.length - 1)) : 0;
-      const date = addDays(todayStr(), Math.min(dayIndex, days - 1));
-      plan.push({ date, chapter: c });
-    });
+  allReviewsFlat().filter(x=>x.subject.id===subjectId && x.status!=="completed").forEach(x=>{
+    const diff = daysBetween(today, x.review.date);
+    if(diff>=0 && diff<=days){ (dayMap[x.review.date]=dayMap[x.review.date]||[]).push({type:"reminder",label:`🔄 مراجعة ${x.chapter.name}`}); }
+  });
+  for(let i=0;i<days;i++){
+    const date = addDays(today,i);
+    const has = dayMap[date] && dayMap[date].length>0;
+    const final = i>=days-2;
+    if(!has && (i%3===2 || final)){ (dayMap[date]=dayMap[date]||[]).push({type:"task",label: final?"📝 مراجعة نهائية وحل أسئلة":"🧠 حل أسئلة وتثبيت"}); }
   }
-  const grouped = {};
-  plan.forEach((p) => { grouped[p.date] = grouped[p.date] || []; grouped[p.date].push(p.chapter); });
-  const dates = Object.keys(grouped).sort();
-
-  return (
-    <Modal onClose={onClose} title="خطة توزيع ذكية">
-      <label className="text-xs text-[#8b8677]">اختر الاختبار</label>
-      <select value={testKey} onChange={(e) => setTestKey(e.target.value)} className="w-full border border-[#E9E4D8] rounded-xl px-3 py-2.5 text-sm mt-1 mb-3">
-        {allTestsFlat.map((x) => (
-          <option key={`${x.subject.id}:${x.test.id}`} value={`${x.subject.id}:${x.test.id}`}>
-            {x.test.name} ({x.subject.name})
-          </option>
-        ))}
-      </select>
-
-      {selected && dates.length === 0 && (
-        <p className="text-sm text-[#6FA287] text-center py-4 font-bold">كل المحطات مكتملة لهذه المادة 🎉</p>
-      )}
-      {selected && dates.length > 0 && (
-        <div className="max-h-[45vh] overflow-y-auto flex flex-col gap-2">
-          {dates.map((date) => (
-            <div key={date} className="bg-[#F6F3EC] rounded-xl p-2.5">
-              <p className="text-xs font-bold text-[#1F5C54] mb-1">{humanDate(date)}</p>
-              {grouped[date].map((c) => (
-                <p key={c.id} className="text-sm flex items-center gap-1.5"><TrainFront size={13} /> {c.name}</p>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </Modal>
-  );
+  const dates = Object.keys(dayMap).sort();
+  el.innerHTML = (remaining.length===0 && dates.length===0)
+    ? `<p style="color:var(--green);font-weight:700;text-align:center;padding:14px 0">كل المحطات مكتملة 🎉</p>`
+    : `<div style="max-height:45vh;overflow-y:auto" class="grid">${dates.map(d=>`<div style="background:var(--track);border-radius:12px;padding:8px 10px">
+        <p style="color:var(--primary);font-weight:800;font-size:11px;margin:0 0 4px">${displayDate(d)}</p>
+        ${dayMap[d].map(e=>`<p style="font-size:12px;margin:2px 0">${esc(e.label)}</p>`).join("")}</div>`).join("")}</div>`;
 }
 
-/* -------------------------------- STATS TAB -------------------------------- */
+/* ======================= GPA (5.0 scale, cumulative + per-semester) ======================= */
+function gpaView(){
+  const cumulative = computeGpa(state.gpaCourses);
+  const totalHours = state.gpaCourses.reduce((s,c)=>s+(Number(c.hours)||0),0);
+  const bySem = {};
+  state.gpaCourses.forEach(c=>{ const k=c.semester?.trim()||"بدون فصل"; (bySem[k]=bySem[k]||[]).push(c); });
+  const semKeys = Object.keys(bySem);
 
-function StatsTab({ state, allChaptersFlat, allReviewsFlat }) {
-  const totalChapters = allChaptersFlat.length;
-  const completedChapters = allChaptersFlat.filter((x) => x.status === "completed").length;
-  const pct = totalChapters ? Math.round((completedChapters / totalChapters) * 100) : 0;
+  return `
+  <div class="card" style="background:var(--primary);color:#fff;text-align:center;padding:22px">
+    <p style="opacity:.7;font-size:11px;margin:0">🧮 المعدل التراكمي (من 5.0)</p>
+    <p class="font-d" style="font-size:34px;font-weight:800;margin:4px 0">${cumulative.toFixed(2)}</p>
+    <p style="opacity:.7;font-size:11px;margin:0">${totalHours} ساعة معتمدة</p>
+  </div>
 
-  const totalReviews = allReviewsFlat.length;
-  const completedReviews = allReviewsFlat.filter((x) => x.status === "completed").length;
-  const upcomingReviews = allReviewsFlat.filter((x) => x.status === "upcoming" || x.status === "due").length;
-  const lateReviews = allReviewsFlat.filter((x) => x.status === "late").length;
+  ${semKeys.length>0?`<div class="section-title"><h2>📚 المعدل الفصلي (من 5.0)</h2></div>
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
+  ${semKeys.map(k=>{ const g=computeGpa(bySem[k]); return `<div class="card" style="text-align:center;padding:12px"><p class="muted" style="font-size:10px;margin:0 0 4px">${esc(k)}</p><p class="font-d" style="font-weight:800;font-size:18px;margin:0">${g.toFixed(2)}</p><p class="muted-i" style="font-size:9px;margin:2px 0 0">${bySem[k].length} مقررات</p></div>`; }).join("")}
+  </div>`:""}
 
-  const studyHours = Math.round(
-    (allChaptersFlat.filter((x) => x.status === "completed").reduce((sum, x) => sum + (x.chapter.estMinutes || 90), 0) / 60) * 10
-  ) / 10;
-
-  if (state.subjects.length === 0) {
-    return <div className="px-4 pt-6"><Card><EmptyState text="لا توجد إحصائيات بعد" sub="أضف مواد وأكمل محطات لترى تقدمك هنا." /></Card></div>;
-  }
-
-  return (
-    <div className="px-4 pt-4 flex flex-col gap-4">
-      <Card className="bg-[#1F5C54] text-white text-center py-6">
-        <p className="text-xs text-white/70 mb-1">التقدم العام</p>
-        <p className="font-display font-extrabold text-4xl">{pct}%</p>
-        <p className="text-xs text-white/70 mt-2">{completedChapters} / {totalChapters} محطة · {studyHours} ساعة مذاكرة</p>
-      </Card>
-
-      <div className="grid grid-cols-3 gap-2">
-        <StatBox label="مراجعات مكتملة" value={completedReviews} color="#6FA287" />
-        <StatBox label="مراجعات قادمة" value={upcomingReviews} color="#3E7CA6" />
-        <StatBox label="مراجعات متأخرة" value={lateReviews} color="#C4593F" />
+  <div class="section-title"><h2>📋 المقررات</h2><button class="btn sm" onclick="addGpaCourse()">➕ مقرر</button></div>
+  ${state.gpaCourses.length===0?`<div class="card"><div class="empty"><div class="em">🧮</div><div class="t">لا توجد مقررات بعد</div><div class="s">اضغط «➕ مقرر» لإضافة أول مقرر.</div></div></div>`:
+  `<div class="grid">${state.gpaCourses.map(c=>`
+    <div class="card">
+      <div class="two-col">
+        <div class="field" style="margin-bottom:6px"><label>اسم المقرر</label><input value="${esc(c.name)}" onchange="updateGpaCourse('${c.id}','name',this.value)"></div>
+        <div class="field" style="margin-bottom:6px;max-width:80px"><label>الساعات</label><input type="number" min="0" value="${c.hours}" onchange="updateGpaCourse('${c.id}','hours',this.value)"></div>
       </div>
-
-      <div>
-        <SectionTitle icon={BarChart3}>الإنجاز لكل مادة</SectionTitle>
-        <div className="flex flex-col gap-2">
-          {state.subjects.map((s) => {
-            const done = s.chapters.filter((c) => chapterStatus(s, c) === "completed").length;
-            const total = s.chapters.length;
-            const p = total ? Math.round((done / total) * 100) : 0;
-            return (
-              <Card key={s.id}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-sm font-bold">{s.name}</p>
-                  <p className="text-xs text-[#8b8677]">{done}/{total}</p>
-                </div>
-                <div className="h-2 bg-[#F1EEE4] rounded-full overflow-hidden">
-                  <div className="h-full bg-[#1F5C54] rounded-full" style={{ width: `${p}%` }} />
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+      <div class="two-col">
+        <div class="field" style="margin-bottom:6px"><label>الفصل الدراسي</label><input value="${esc(c.semester||"")}" placeholder="مثال: الفصل الأول 2026" onchange="updateGpaCourse('${c.id}','semester',this.value)"></div>
+        <div class="field" style="margin-bottom:6px"><label>التقدير</label><select onchange="updateGpaCourse('${c.id}','grade',this.value)">${Object.keys(GRADE_SCALE).map(g=>`<option value="${g}" ${c.grade===g?"selected":""}>${g} (${GRADE_SCALE[g].toFixed(2)})</option>`).join("")}</select></div>
       </div>
+      <button onclick="deleteGpaCourse('${c.id}')" style="color:var(--red);font-size:12px">🗑️ حذف المقرر</button>
+    </div>`).join("")}</div>`}
+  `;
+}
 
-      <p className="text-center text-[11px] text-[#B9B3A4]">إجمالي المراجعات: {completedReviews} / {totalReviews}</p>
+/* ======================= STATS ======================= */
+function statsView(){
+  if(state.subjects.length===0) return `<div class="card"><div class="empty"><div class="em">📊</div><div class="t">لا توجد إحصائيات بعد</div><div class="s">أضف مواد وأكمل محطات لترى تقدمك هنا.</div></div></div>`;
+  const chapters = allChaptersFlat(); const total=chapters.length, done=chapters.filter(x=>x.status==="completed").length;
+  const pct = total?Math.round(done/total*100):0;
+  const reviews = allReviewsFlat();
+  const completedR = reviews.filter(x=>x.status==="completed").length, upcomingR = reviews.filter(x=>x.status==="upcoming"||x.status==="due").length, lateR = reviews.filter(x=>x.status==="late").length;
+  const hours = Math.round(chapters.filter(x=>x.status==="completed").reduce((s,x)=>s+(x.chapter.estMinutes||90),0)/60*10)/10;
+  return `
+  <div class="card" style="background:var(--primary);color:#fff;text-align:center;padding:22px">
+    <p style="opacity:.7;font-size:11px;margin:0">${pct===100?"🏆 اكتمل كل شيء!":"🔥 التقدم العام"}</p>
+    <p class="font-d" style="font-size:34px;font-weight:800;margin:4px 0">${pct}%</p>
+    <p style="opacity:.7;font-size:11px;margin:0">${done} / ${total} محطة · ${hours} ساعة مذاكرة</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+    <div class="card" style="text-align:center;padding:12px"><p class="font-d" style="font-weight:800;color:var(--green);margin:0;font-size:18px">${completedR}</p><p class="muted" style="font-size:10px;margin:4px 0 0">مكتملة ✅</p></div>
+    <div class="card" style="text-align:center;padding:12px"><p class="font-d" style="font-weight:800;color:var(--blue);margin:0;font-size:18px">${upcomingR}</p><p class="muted" style="font-size:10px;margin:4px 0 0">قادمة 🔵</p></div>
+    <div class="card" style="text-align:center;padding:12px"><p class="font-d" style="font-weight:800;color:var(--red);margin:0;font-size:18px">${lateR}</p><p class="muted" style="font-size:10px;margin:4px 0 0">متأخرة ⚠️</p></div>
+  </div>
+  <div class="section-title"><h2>🏆 الإنجاز لكل مادة</h2></div>
+  <div class="grid">${state.subjects.map(s=>{ const d=s.chapters.filter(c=>chapterStatus(s,c)==="completed").length, t=s.chapters.length, p=t?Math.round(d/t*100):0;
+    return `<div class="card"><div class="row"><p style="margin:0;font-weight:700;font-size:13px">${s.emoji} ${esc(s.name)}</p><p class="muted" style="margin:0;font-size:11px">${d}/${t}</p></div><div class="bar" style="margin-top:8px"><i style="width:${p}%;background:var(--primary)"></i></div></div>`;
+  }).join("")}</div>
+  `;
+}
+
+/* ======================= MODALS: subject/chapter ======================= */
+function modalWrap(title, body){
+  return `<div class="modal" onclick="event.stopPropagation()"><div class="modal-head"><h3 class="font-d">${title}</h3><button class="close-x" onclick="closeModal()">✕</button></div>${body}</div>`;
+}
+function openAddSubjectModal(){
+  const body = `
+  <div class="field"><label>اسم المادة</label><input id="f-subj-name" placeholder="مثال: Pharmacology"></div>
+  <div class="two-col">
+    <div class="field"><label>الإيموجي المختار</label><input id="f-subj-emoji" value="📘" maxlength="4" style="text-align:center;font-size:17px"></div>
+    <div class="field"><label>اللون الشخصي 🎨</label><input id="f-subj-color" type="color" value="${COLOR_PRESETS[0]}"></div>
+  </div>
+  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">اختر إيموجي 😀</label>
+  <div class="emoji-grid">${EMOJI_LIST.map(e=>`<button onclick="pickEmoji('f-subj-emoji','${e}')">${e}</button>`).join("")}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+    ${COLOR_PRESETS.map(c=>`<button class="swatch" style="background:${c}" onclick="document.getElementById('f-subj-color').value='${c}'"></button>`).join("")}
+  </div>
+  <div class="field"><label>عدد الساعات المعتمدة (اختياري)</label><input id="f-subj-hours" type="number" min="0" placeholder="مثال: 3"></div>
+  <p class="muted" style="font-size:11px;margin:6px 0">🚉 أول محطة (Chapter)</p>
+  <div class="field"><label>اسم المحطة</label><input id="f-subj-chname" value="Chapter 1"></div>
+  <div class="two-col">
+    <div class="field"><label>عدد الصفحات</label><input id="f-subj-chpages" type="number" min="0"></div>
+    <div class="field"><label>المدة المتوقعة (دقيقة)</label><input id="f-subj-chmin" type="number" min="0" placeholder="مثلًا 90"></div>
+  </div>
+  <button class="btn" style="width:100%;justify-content:center" onclick="submitAddSubject()">🚀 إضافة المادة</button>
+  `;
+  openModal(modalWrap("🎯 مادة جديدة", body));
+}
+function openDeleteSubjectModal(subjectId){
+  const s = state.subjects.find(x=>x.id===subjectId);
+  const body = `<p class="muted" style="font-size:13px;margin-bottom:14px">سيتم حذف "${esc(s.name)}" وكل محطاتها ومراجعاتها. هل أنت متأكد؟</p>
+  <div class="row" style="gap:8px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="closeModal()">إلغاء</button><button class="btn danger" style="flex:1;justify-content:center" onclick="deleteSubject('${subjectId}')">حذف</button></div>`;
+  openModal(modalWrap("حذف المادة", body));
+}
+function openAddChapterModal(subjectId){
+  const subject = state.subjects.find(s=>s.id===subjectId);
+  const body = `
+  <div class="field"><label>اسم المحطة (Chapter)</label><input id="f-ch-name" value="Chapter ${subject.chapters.length+1}"></div>
+  <div class="two-col">
+    <div class="field"><label>عدد الصفحات</label><input id="f-ch-pages" type="number" min="0"></div>
+    <div class="field"><label>المدة المتوقعة (دقيقة)</label><input id="f-ch-min" type="number" min="0" placeholder="مثلًا 90"></div>
+  </div>
+  <button class="btn" style="width:100%;justify-content:center" onclick="addChapterSubmit('${subjectId}')">➕ إضافة</button>
+  `;
+  openModal(modalWrap("🚉 محطة جديدة", body));
+}
+function openEditChapterModal(subjectId, chapterId){
+  const subject = state.subjects.find(s=>s.id===subjectId); const c = subject.chapters.find(x=>x.id===chapterId);
+  const body = `
+  <div class="field"><label>اسم المحطة</label><input id="f-ch-name" value="${esc(c.name)}"></div>
+  <div class="two-col">
+    <div class="field"><label>عدد الصفحات</label><input id="f-ch-pages" type="number" min="0" value="${c.pages||""}"></div>
+    <div class="field"><label>المدة المتوقعة (دقيقة)</label><input id="f-ch-min" type="number" min="0" value="${c.estMinutes||""}" placeholder="مثلًا 90"></div>
+  </div>
+  <button class="btn" style="width:100%;justify-content:center" onclick="editChapterSubmit('${subjectId}','${chapterId}')">💾 حفظ</button>
+  `;
+  openModal(modalWrap("✏️ تعديل المحطة", body));
+}
+
+/* ======================= SETTINGS ======================= */
+function openSettingsModal(){
+  const legendKeys = ["occasion","holiday","test","lecture","task","reminder","other"];
+  const body = `
+  <div class="row" style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
+    <span style="font-size:13px;font-weight:700">🌙 الوضع الليلي</span>
+    <button class="toggle ${state.darkMode?'on':''}" onclick="toggleDark();openSettingsModal()"><i></i></button>
+  </div>
+  <div style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
+    <p style="font-size:13px;font-weight:700;margin:0 0 8px">🕐 صيغة الوقت</p>
+    <div class="seg"><button class="${state.timeFormat==='24'?'on':''}" onclick="setTimeFormat('24');openSettingsModal()">24 ساعة</button><button class="${state.timeFormat==='12'?'on':''}" onclick="setTimeFormat('12');openSettingsModal()">12 ساعة</button></div>
+  </div>
+  <div style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
+    <p style="font-size:13px;font-weight:700;margin:0 0 8px">📆 نظام التاريخ</p>
+    <div class="seg"><button class="${state.dateSystem==='gregorian'?'on':''}" onclick="setDateSystem('gregorian');openSettingsModal()">ميلادي</button><button class="${state.dateSystem==='hijri'?'on':''}" onclick="setDateSystem('hijri');openSettingsModal()">هجري</button></div>
+    <p class="muted-i" style="font-size:10px;margin:8px 0 0">التاريخ الهجري تقريبي وقد يختلف بيوم عن تقويم أم القرى الرسمي.</p>
+  </div>
+  <div style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
+    <p style="font-size:13px;font-weight:700;margin:0 0 8px">🎨 دليل الألوان</p>
+    <div style="display:flex;flex-direction:column;gap:6px">
+    ${legendKeys.map(k=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:10px;height:10px;border-radius:50%;background:var(${EVENT_COLORS[k].v})"></span>${EVENT_COLORS[k].label}</div>`).join("")}
     </div>
-  );
+  </div>
+  <p class="muted" style="font-size:11px;margin-bottom:10px">جميع بياناتك محفوظة تلقائيًا على هذا الجهاز والمتصفح.</p>
+  <button class="btn danger" style="width:100%;justify-content:center" onclick="openResetConfirm()">🗑️ إعادة تعيين جميع البيانات</button>
+  `;
+  openModal(modalWrap("⚙️ الإعدادات", body));
+}
+function openResetConfirm(){
+  const body = `<p style="color:var(--red);font-weight:700;font-size:13px;margin-bottom:12px">سيتم حذف كل شيء نهائيًا. هل أنت متأكد؟</p>
+  <div class="row" style="gap:8px"><button class="btn ghost" style="flex:1;justify-content:center" onclick="openSettingsModal()">إلغاء</button><button class="btn danger" style="flex:1;justify-content:center" onclick="resetAll()">تأكيد الحذف</button></div>`;
+  openModal(modalWrap("⚠️ تأكيد", body));
 }
 
-function StatBox({ label, value, color }) {
-  return (
-    <Card className="text-center py-3">
-      <p className="font-display font-extrabold text-xl" style={{ color }}>{value}</p>
-      <p className="text-[10px] text-[#8b8677] mt-0.5">{label}</p>
-    </Card>
-  );
-}
-
-/* -------------------------------- shared modal -------------------------------- */
-
-function Modal({ children, onClose, title }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:w-[400px] p-5 max-h-[85vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display font-bold text-base">{title}</h3>
-          <button onClick={onClose}><X size={19} className="text-[#B9B3A4]" /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function SettingsModal({ onClose, onReset }) {
-  const [confirming, setConfirming] = useState(false);
-  return (
-    <Modal onClose={onClose} title="الإعدادات">
-      <div className="flex flex-col gap-3">
-        <div className="bg-[#F6F3EC] rounded-xl p-3">
-          <p className="text-xs text-[#8b8677]">جميع بياناتك (المواد، المحطات، المراجعات، الاختبارات) محفوظة تلقائيًا على هذا الجهاز والمتصفح.</p>
-        </div>
-        {!confirming ? (
-          <button onClick={() => setConfirming(true)} className="w-full flex items-center justify-center gap-1.5 border border-[#C4593F] text-[#C4593F] rounded-xl py-2.5 text-sm font-bold">
-            <Trash2 size={15} /> إعادة تعيين جميع البيانات
-          </button>
-        ) : (
-          <div className="border border-[#C4593F]/30 rounded-xl p-3">
-            <p className="text-xs text-[#C4593F] font-bold mb-2">سيتم حذف كل شيء نهائيًا. هل أنت متأكد؟</p>
-            <div className="flex gap-2">
-              <button onClick={() => setConfirming(false)} className="flex-1 bg-[#F1EEE4] rounded-lg py-2 text-xs font-bold">إلغاء</button>
-              <button onClick={onReset} className="flex-1 bg-[#C4593F] text-white rounded-lg py-2 text-xs font-bold">تأكيد الحذف</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </Modal>
+/* ======================= INIT ======================= */
+load();
+</script>
+</body>
+</html>
