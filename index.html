@@ -5,29 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Study Stations 🚉</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#EFE9D8; --card:#FBF7EC; --border:#E4DCC6; --track:#ECE5D2;
+    --bg:#F6F5F1; --card:#FFFFFF; --border:#E7E4DA; --track:#F1EFE8;
     --text:#23342F; --muted:#8b8677; --muted-icon:#B9B3A4;
     --primary:#1F5C54; --gold:#E4A93B; --green:#6FA287; --red:#C4593F;
     --blue:#4F86B0; --purple:#9B7FC7; --rose:#D8607A; --yellow:#E3C23C; --gray-light:#B7BDC6;
-    --zebra:#00000008;
+    --zebra:#00000006;
   }
   [data-theme="dark"]{
     --bg:#181F1D; --card:#212B27; --border:#354039; --track:#26312C;
     --text:#EAE6D9; --muted:#A6A08E; --muted-icon:#6E7871; --zebra:#ffffff08;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;}
+  :root{ --body-font: 'Tajawal', sans-serif; }
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body-font);}
   .font-d{font-family:'Cairo',sans-serif;}
   ::-webkit-scrollbar{width:6px;height:6px;}
   ::-webkit-scrollbar-thumb{background:var(--muted-icon);border-radius:3px;}
   button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
   input,select,textarea{font-family:inherit;color:var(--text);}
   input[type=color]{padding:0;border:1px solid var(--border);border-radius:10px;width:44px;height:38px;background:var(--card);}
-  input[type=date],input[type=time]{color-scheme: light;}
-  [data-theme="dark"] input[type=date],[data-theme="dark"] input[type=time]{color-scheme: dark;}
 
   .shell{display:flex;min-height:100vh;}
   .sidebar{width:210px;flex-shrink:0;background:var(--card);border-left:1px solid var(--border);
@@ -35,13 +34,13 @@
     transform:translateX(100%);transition:transform .25s ease;z-index:41;}
   .sidebar.open{transform:translateX(0);}
   .sidebar-backdrop{position:fixed;inset:0;background:#00000055;z-index:40;}
-  .hamburger{font-size:19px;padding:4px;border-radius:8px;}
+  @media(min-width:900px){ .content{margin-right:0;} }
+  .side-arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:42;
+    width:22px;height:52px;background:var(--primary);color:#fff;border-radius:12px 0 0 12px;
+    display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:-2px 0 8px rgba(0,0,0,.12);
+    transition:right .25s ease;}
+  .hamburger{font-size:19px;padding:4px 8px;border-radius:8px;}
   .hamburger:hover{background:var(--track);}
-  @media(min-width:900px){
-    .sidebar{position:sticky;transform:none !important;}
-    .shell{padding-right:0;}
-  }
-  @media(max-width:899px){ .shell{padding-right:0;} }
   .side-logo{display:flex;align-items:center;gap:8px;padding:6px 8px 16px;}
   .side-logo .box{background:var(--primary);color:#fff;border-radius:12px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
   .side-logo b{font-size:14px;}
@@ -50,15 +49,18 @@
   .nav-item.active{background:color-mix(in srgb, var(--primary) 15%, transparent);color:var(--primary);}
   .nav-item:hover{background:var(--track);}
   .nav-item .ic{font-size:17px;width:20px;text-align:center;flex-shrink:0;}
+  .nav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 6px;margin-right:auto;}
   .side-bottom{margin-top:auto;display:flex;flex-direction:column;gap:4px;}
 
   .content{flex:1;min-width:0;padding-bottom:40px;}
   .topbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
   .topbar h1{font-size:16px;margin:0;}
   .main{padding:16px 18px;max-width:1000px;}
+  .main.full-width{max-width:none;}
 
   .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:16px;}
   .card.hl{border-color:var(--gold);}
+  .widget-narrow{max-width:380px;}
   .grid{display:grid;gap:10px;}
   .row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .muted{color:var(--muted);}
@@ -68,7 +70,9 @@
   .btn.outline{background:transparent;border:2px dashed color-mix(in srgb, var(--primary) 40%, transparent);color:var(--primary);}
   .btn.ghost{background:var(--track);color:var(--text);}
   .btn.danger{background:var(--red);color:#fff;}
+  .btn.blue{background:var(--blue);} .btn.purple{background:var(--purple);} .btn.rose{background:var(--rose);}
   .btn.sm{padding:6px 10px;font-size:11px;border-radius:20px;}
+  .btn.icon{padding:8px;border-radius:50%;}
   .pill{font-size:10px;font-weight:800;padding:4px 9px;border-radius:20px;white-space:nowrap;}
   .bar{height:7px;border-radius:6px;background:var(--track);overflow:hidden;}
   .bar > i{display:block;height:100%;border-radius:6px;}
@@ -100,30 +104,29 @@
   .toggle:not(.on) i{right:20px;}
 
   .swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;flex-shrink:0;}
-  .swatch.sel{border-color:var(--text);}
-
   .seg{display:flex;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:3px;gap:2px;}
   .seg button{flex:1;padding:8px;border-radius:12px;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;}
   .seg button.on{background:var(--primary);color:#fff;}
 
-  .choice{border:2px solid var(--border);border-radius:14px;padding:10px;text-align:center;font-size:12px;font-weight:700;flex:1;}
+  .choice{border:2px solid var(--border);border-radius:14px;padding:10px 6px;text-align:center;font-size:11px;font-weight:700;flex:1;}
   .choice.on{border-color:var(--primary);background:color-mix(in srgb, var(--primary) 10%, transparent);color:var(--primary);}
 
-  .emoji-grid{max-height:130px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;padding:4px;border:1px solid var(--border);border-radius:14px;margin-bottom:12px;}
-  .emoji-grid button{font-size:17px;width:30px;height:30px;border-radius:8px;}
-  .emoji-grid button:hover{background:var(--track);}
+  .emoji-btn{font-size:24px;width:50px;height:50px;border:1px solid var(--border);border-radius:14px;background:var(--bg);flex-shrink:0;}
+  .emoji-grid{max-height:150px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid var(--border);border-radius:14px;margin-top:8px;background:var(--track);}
+  .emoji-grid button{font-size:18px;width:32px;height:32px;border-radius:8px;}
+  .emoji-grid button:hover{background:var(--card);}
 
   /* timetable grid */
   .tt-wrap{overflow-x:auto;}
-  .tt-grid{display:grid;min-width:560px;}
+  .tt-grid{display:grid;min-width:680px;width:100%;}
   .tt-head{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;padding:8px 4px;border-bottom:2px solid var(--border);}
-  .tt-col{position:relative;border-left:1px solid var(--border);}
+  .tt-col{position:relative;border-left:1px solid var(--border);cursor:copy;}
   .tt-col.zebra{background:var(--zebra);}
-  .tt-hourline{position:absolute;right:0;left:0;border-top:1px solid var(--border);font-size:0;}
+  .tt-hourline{position:absolute;right:0;left:0;border-top:1px solid var(--border);font-size:0;pointer-events:none;}
   .tt-timelabel{font-size:10px;color:var(--muted);display:flex;align-items:flex-start;justify-content:center;padding-top:2px;}
-  .tt-block{position:absolute;left:3px;right:3px;border-radius:12px;border:1.5px solid; padding:5px 6px;overflow:hidden;text-align:center;}
-  .tt-block b{font-size:10.5px;display:block;}
-  .tt-block span{font-size:9px;display:block;opacity:.85;}
+  .tt-block{position:absolute;left:3px;right:3px;border-radius:12px;border:1.5px solid;padding:4px 6px;overflow:hidden;text-align:center;min-height:36px;cursor:pointer;}
+  .tt-block b{font-size:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2;}
+  .tt-block span{font-size:8.5px;display:block;opacity:.85;}
   .tt-addrow{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px;}
   .tt-addbtn{flex-shrink:0;font-size:10px;font-weight:800;color:var(--primary);background:var(--track);border-radius:20px;padding:7px 12px;white-space:nowrap;}
 
@@ -136,13 +139,16 @@
   .cal-dots{display:flex;gap:2px;}
   .cal-dots i{width:5px;height:5px;border-radius:50%;display:block;}
 
-  /* weeks static list */
   .week-card{width:100%;text-align:right;}
-
-  /* review row */
-  .rev-check{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
+  .home-grid{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;}
+  .home-main{flex:2;min-width:280px;order:2;}
+  .home-side{flex:1;min-width:250px;max-width:320px;display:flex;flex-direction:column;gap:14px;order:1;}
+  .home-side .card{margin-top:0 !important;padding:13px;}
+  @media(min-width:900px){ .home-main{order:1;} .home-side{order:2;} }  .rev-check{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
   .rev-check.done{background:var(--green);border-color:var(--green);color:#fff;}
-
+  .todo-check{width:26px;height:26px;border-radius:8px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;}
+  .todo-check.done{background:var(--green);border-color:var(--green);color:#fff;}
+  .prio-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   a{color:inherit;}
 </style>
 </head>
@@ -151,7 +157,7 @@
 
 <script>
 /* ======================= DATA & CONSTANTS ======================= */
-const STORAGE_KEY = "study-stations-v3";
+const STORAGE_KEY = "study-stations-v4";
 const uid = () => Math.random().toString(36).slice(2,10);
 const pad = n => String(n).padStart(2,"0");
 const toDateStr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -173,6 +179,14 @@ const formatRange = (a,b) => {
   return `${sd} ${sm} ${sy}م – ${ed} ${em} ${ey}م`;
 };
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function countdownLabel(dateStr){
+  const diff = daysBetween(todayStr(), dateStr);
+  if(diff===0) return "اليوم";
+  if(diff===1) return "غدًا";
+  if(diff>1) return `بعد ${diff} يوم`;
+  if(diff===-1) return "أمس";
+  return `منذ ${Math.abs(diff)} يوم`;
+}
 
 /* ---- Hijri conversion (tabular / "Kuwaiti" algorithm — approximate, ±1 day of official Umm al-Qura) ---- */
 function gregorianToJDN(y,m,d){ const a=Math.floor((14-m)/12), yy=y+4800-a, mm=m+12*a-3; return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045; }
@@ -188,24 +202,49 @@ function jdnToHijri(jdn){
   return {year, month, day};
 }
 function gToH(y,m,d){ const h = jdnToHijri(gregorianToJDN(y,m,d)); return [h.year,h.month,h.day]; }
+function hijriToJDN(hy,hm,hd){ return hd + Math.ceil(29.5*(hm-1)) + (hy-1)*354 + Math.floor((3+11*hy)/30) + 1948440 - 1; }
+function jdnToGregorian(jdn){
+  let a = jdn + 32044;
+  let b = Math.floor((4*a+3)/146097);
+  let c = a - Math.floor((146097*b)/4);
+  let d = Math.floor((4*c+3)/1461);
+  let e = c - Math.floor((1461*d)/4);
+  let m = Math.floor((5*e+2)/153);
+  const day = e - Math.floor((153*m+2)/5) + 1;
+  const month = m + 3 - 12*Math.floor(m/10);
+  const year = 100*b + d - 4800 + Math.floor(m/10);
+  return {year, month, day};
+}
+function hToG(hy,hm,hd){ const g = jdnToGregorian(hijriToJDN(hy,hm,hd)); return `${g.year}-${pad(g.month)}-${pad(g.day)}`; }
+const HIJRI_YEAR_START = 1448, HIJRI_YEAR_END = 1465;
+function hijriYearOptions(selected){
+  let opts = "";
+  for(let y=HIJRI_YEAR_START; y<=HIJRI_YEAR_END; y++){ opts += `<option value="${y}" ${Number(selected)===y?"selected":""}>${y}هـ</option>`; }
+  return opts;
+}
 function hijriHumanDate(dateStr){ const d=new Date(dateStr+"T00:00:00"); const [hy,hm,hd]=gToH(d.getFullYear(),d.getMonth()+1,d.getDate()); return `${WEEKDAYS_AR[d.getDay()]} ${hd} ${HIJRI_MONTHS[hm-1]} ${hy}هـ`; }
 function displayDate(dateStr){ return state.dateSystem==="hijri" ? hijriHumanDate(dateStr) : humanDate(dateStr); }
+function shortDisplayDate(dateStr){
+  if(state.dateSystem==="hijri"){ const d=new Date(dateStr+"T00:00:00"); const [,hm,hd]=gToH(d.getFullYear(),d.getMonth()+1,d.getDate()); return `${hd} ${HIJRI_MONTHS[hm-1]}`; }
+  return `${gDay(dateStr)} ${gMonth(dateStr)}`;
+}
+function eventRangeLabel(start,end){ if(!end || start===end) return ""; return ` (من ${shortDisplayDate(start)} إلى ${shortDisplayDate(end)})`; }
 
 const YEAR_START = "2026-08-23";
 const WEEK_ORDINALS = ["الأول","الثاني","الثالث","الرابع","الخامس","السادس","السابع","الثامن","التاسع","العاشر","الحادي عشر","الثاني عشر","الثالث عشر","الرابع عشر","الخامس عشر","السادس عشر","السابع عشر","الثامن عشر","التاسع عشر","العشرون"];
 const WEEK_HIJRI = ["10 إلى 16 ربيع الأول 1448هـ","17 إلى 23 ربيع الأول 1448هـ","24 إلى 30 ربيع الأول 1448هـ","1 إلى 7 ربيع الآخر 1448هـ","8 إلى 14 ربيع الآخر 1448هـ","15 إلى 21 ربيع الآخر 1448هـ","22 إلى 28 ربيع الآخر 1448هـ","29 ربيع الآخر إلى 5 جمادى الأولى 1448هـ","6 إلى 12 جمادى الأولى 1448هـ","13 إلى 19 جمادى الأولى 1448هـ","20 إلى 26 جمادى الأولى 1448هـ","27 جمادى الأولى إلى 3 جمادى الآخرة 1448هـ","4 إلى 10 جمادى الآخرة 1448هـ","11 إلى 17 جمادى الآخرة 1448هـ","18 إلى 24 جمادى الآخرة 1448هـ","25 جمادى الآخرة إلى 1 رجب 1448هـ","2 إلى 8 رجب 1448هـ","9 إلى 15 رجب 1448هـ","16 إلى 22 رجب 1448هـ","23 إلى 29 رجب 1448هـ"];
 const WEEKS = WEEK_ORDINALS.map((ordinal,i)=>{ const start=addDays(YEAR_START,i*7); const end=addDays(start,6); return {number:i+1,ordinal,start,end,hijri:WEEK_HIJRI[i]}; });
 const KEY_DATES = [
-  {id:"term-start",type:"occasion",emoji:"🎓",title:"بداية العام الدراسي",start:"2026-08-23",end:"2026-08-23"},
-  {id:"national-day",type:"holiday",emoji:"🇸🇦",title:"إجازة اليوم الوطني",start:"2026-09-23",end:"2026-09-26"},
-  {id:"autumn-break",type:"holiday",emoji:"🍂",title:"إجازة الخريف",start:"2026-11-20",end:"2026-11-28"},
-  {id:"mid-year-break",type:"holiday",emoji:"❄️",title:"إجازة منتصف العام الدراسي",start:"2027-01-08",end:"2027-01-16"},
+  {id:"term-start",type:"occasion",emoji:"🎉",title:"بداية العام الدراسي",start:"2026-08-23",end:"2026-08-23"},
+  {id:"national-day",type:"holiday",emoji:"🌴",title:"إجازة اليوم الوطني",start:"2026-09-23",end:"2026-09-26"},
+  {id:"autumn-break",type:"holiday",emoji:"🌴",title:"إجازة الخريف",start:"2026-11-20",end:"2026-11-28"},
+  {id:"mid-year-break",type:"holiday",emoji:"🌴",title:"إجازة منتصف العام الدراسي",start:"2027-01-08",end:"2027-01-16"},
 ];
 const EVENT_COLORS = {
-  occasion:{v:"--rose",label:"🎗️ مناسبات"}, holiday:{v:"--yellow",label:"🏖️ إجازات"},
-  test:{v:"--purple",label:"🏁 اختبارات"}, lecture:{v:"--blue",label:"📘 محاضرات"},
-  task:{v:"--green",label:"✅ مهام"}, reminder:{v:"--yellow",label:"🔔 تذكيرات"},
-  other:{v:"--gray-light",label:"⚪ أخرى"}, station:{v:"--primary",label:"🚉 محطة جديدة"},
+  occasion:{v:"--rose",label:"🎉 مناسبات"}, holiday:{v:"--yellow",label:"🌴 إجازات"},
+  test:{v:"--purple",label:"📝 اختبارات"}, lecture:{v:"--blue",label:"🏫 محاضرات"},
+  task:{v:"--green",label:"🗒️ مهام"}, reminder:{v:"--yellow",label:"⏰ تذكيرات"},
+  other:{v:"--gray-light",label:"🔘 أخرى"}, station:{v:"--primary",label:"🚉 محطة جديدة"},
 };
 const REVIEW_OFFSETS = [1,3,7,14,30];
 const DEFAULT_TASKS = ["قراءة السلايدات","فهم المحتوى","كتابة الملاحظات","تلخيص Chapter","حل الأسئلة"];
@@ -217,30 +256,39 @@ const EMOJI_LIST = ["📘","📗","📕","📙","📖","📔","📒","📓","✏
   "🧑‍⚖️","🧑‍🔬","🧑‍⚕️","🧑‍🏫","🧑‍💻","🌱","🧴","🧵","🏗️","🚀","✈️","🏦","💰","🗣️","🌐","🧩","🕌","📜"];
 const COLOR_PRESETS = ["#C9A6B0","#9FB8CE","#A9C4A0","#E3C99A","#B9A6D6","#C4BFA8","#E0B6A3","#8FBFB0"];
 const GRADE_SCALE = {"A+":5.00,"A":4.75,"B+":4.50,"B":4.00,"B-":3.50,"C+":3.00,"C":2.50,"C-":2.00,"D+":1.50,"D":1.00,"F":0.00};
-const EVENT_TYPE_OPTIONS = [["occasion","🎗️ مناسبة"],["holiday","🏖️ إجازة"],["test","🏁 اختبار"],["lecture","📘 محاضرة"],["task","✅ مهمة"],["reminder","🔔 تذكير"],["other","⚪ أخرى"]];
+const EVENT_TYPE_OPTIONS = [["occasion","🎉 مناسبة"],["holiday","🌴 إجازة"],["test","📝 اختبار"],["lecture","🏫 محاضرة"],["task","🗒️ مهمة"],["reminder","⏰ تذكير"],["other","🔘 أخرى"]];
+const PRIORITY = { high:{v:"--red",label:"🔴 عالية",order:0}, medium:{v:"--yellow",label:"🟡 متوسطة",order:1}, low:{v:"--green",label:"🟢 منخفضة",order:2} };
+const SUBJECT_KINDS = [["نظري","📖 نظري"],["عملي","🧪 عملي"]];
 
 /* ======================= STATE ======================= */
-const defaultState = () => ({ subjects:[], weeklyLog:{}, timetable:{}, gpaCourses:[], customEvents:[], todos:[], darkMode:false, timeFormat:"24", dateSystem:"gregorian" });
+const defaultState = () => ({ subjects:[], weeklyLog:{}, timetable:{}, gpaCourses:[], gpaPreviousTerms:[], customEvents:[], todos:[], darkMode:false, timeFormat:"24", dateSystem:"gregorian", fontFamily:"Tajawal" });
 let state = defaultState();
-let ui = { view:"home", subjectDetailId:null, weekDetailNumber:null, calMode:"month", modal:null, sidebarOpen:false };
-function isMobile(){ return window.innerWidth < 900; }
-function toggleSidebar(){ ui.sidebarOpen = !ui.sidebarOpen; render(); }
-function closeSidebar(){ ui.sidebarOpen = false; render(); }
+let ui = { view:"home", subjectDetailId:null, weekDetailNumber:null, calMode:"month", calCategoryFilter:"all", modal:null, sidebarOpen:true, reviewFilterSubject:"all", reviewGroupBy:"status", reviewExpanded:null };
 let calCursor = { y: new Date().getFullYear(), m: new Date().getMonth() };
+function isMobile(){ return window.innerWidth < 900; }
 
 async function persist(){ try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }catch(e){ console.error("save failed",e); } }
 async function load(){
-  try{ const res = await window.storage.get(STORAGE_KEY,false); if(res && res.value) state = {...defaultState(), ...JSON.parse(res.value)}; }catch(e){}
-  applyTheme(); render();
+  try{
+    const res = await window.storage.get(STORAGE_KEY,false);
+    if(res && res.value){
+      state = {...defaultState(), ...JSON.parse(res.value)};
+      if(!Array.isArray(state.gpaPreviousTerms)) state.gpaPreviousTerms = [];
+      if(state.gpaPrevious && (state.gpaPrevious.gpa || state.gpaPrevious.hours) && state.gpaPreviousTerms.length===0){
+        state.gpaPreviousTerms.push({id:uid(), label:"فصول سابقة", gpa:state.gpaPrevious.gpa, hours:state.gpaPrevious.hours});
+      }
+    }
+  }catch(e){}
+  applyTheme(); applyFont(); render();
 }
 function applyTheme(){ document.documentElement.setAttribute("data-theme", state.darkMode?"dark":"light"); }
+function applyFont(){ document.documentElement.style.setProperty('--body-font', `'${state.fontFamily||'Tajawal'}', sans-serif`); }
 
 /* ======================= HELPERS ======================= */
 function hexToRgb(hex){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
 function rgbToHex(a){ return '#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join(''); }
 function mixHex(a,b,ratio){ const A=hexToRgb(a),B=hexToRgb(b); return rgbToHex(A.map((v,i)=>v+(B[i]-v)*ratio)); }
-const CARD_HEX_LIGHT = "#FBF7EC", CARD_HEX_DARK = "#212B27";
-function subjectPastel(hex){ const base = state.darkMode ? CARD_HEX_DARK : CARD_HEX_LIGHT; return { bg: mixHex(base, hex, 0.30), border: mixHex(base, hex, 0.75) }; }
+function subjectPastel(hex){ const base = state.darkMode ? "#212B27" : "#FFFFFF"; return { bg: mixHex(base, hex, 0.30), border: mixHex(base, hex, 0.75) }; }
 function fmtTime(hhmm){
   if(!hhmm) return "--:--";
   const [h,m] = hhmm.split(":").map(Number);
@@ -254,8 +302,8 @@ function newChapter(name, order, pages, estMinutes){
   return { id:uid(), name, order, pages: pages?Number(pages):null, estMinutes: estMinutes?Number(estMinutes):null,
     tasks: DEFAULT_TASKS.map(l=>({id:uid(),label:l,done:false})), completedDate:null, reviews:[] };
 }
-function newSubject({name,emoji,color,creditHours,chapterName,chapterPages,chapterMinutes}){
-  return { id:uid(), name, emoji: emoji||"📘", color: color||COLOR_PRESETS[0], creditHours: creditHours?Number(creditHours):null,
+function newSubject({name,emoji,color,kind,creditHours,chapterName,chapterPages,chapterMinutes}){
+  return { id:uid(), name, emoji: emoji||"📘", color: color||COLOR_PRESETS[0], kind: kind||"نظري", creditHours: creditHours?Number(creditHours):null,
     chapters:[newChapter(chapterName||"Chapter 1",0,chapterPages,chapterMinutes)], tests:[] };
 }
 function chapterStatus(subject, chapter){
@@ -298,34 +346,69 @@ function generateReviewDates(startDateStr, mode, endDate){
   }
   return dates;
 }
+function pendingTodosCount(){ return state.todos.filter(t=>!t.done).length; }
 
-/* ======================= ACTIONS ======================= */
-function setView(v){ ui.view=v; ui.subjectDetailId=null; ui.weekDetailNumber=null; if(isMobile()) ui.sidebarOpen=false; render(); }
+/* ======================= events aggregation (calendar-wide) ======================= */
+function dayEvents(dateStr){
+  const evs = [];
+  KEY_DATES.forEach(kd=>{ if(dateStr===kd.start) evs.push({type:kd.type,label:`${kd.emoji} ${kd.title}${eventRangeLabel(kd.start,kd.end)}`}); });
+  allTestsFlat().forEach(x=>{ if(x.test.date===dateStr) evs.push({type:"test",label:`📝 ${x.test.name} — ${x.subject.name}`, testId:x.test.id}); });
+  (state.weeklyLog[dateStr]||[]).forEach(e=>{ const subj=state.subjects.find(s=>s.id===e.subjectId); evs.push({type:"lecture",label:`🏫 ${e.title} — ${subj?.name||""}`}); });
+  allReviewsFlat().forEach(x=>{ if(x.review.date===dateStr) evs.push({type:"reminder",label:`⏰ مراجعة ${x.chapter.name} — ${x.subject.name}`}); });
+  state.customEvents.forEach(e=>{ if(dateStr===e.date) evs.push({type:e.type,label:`${esc(e.title)}${eventRangeLabel(e.date,e.endDate)}`, customId:e.id}); });
+  state.todos.forEach(t=>{ if(t.addToCalendar && t.dueDate===dateStr) evs.push({type:"task",label:`🗒️ ${t.text}`, todoId:t.id}); });
+  return evs;
+}
+function allKnownDates(){
+  const dates = [];
+  allTestsFlat().forEach(x=>dates.push(x.test.date));
+  KEY_DATES.forEach(kd=>{ dates.push(kd.start); dates.push(kd.end); });
+  state.customEvents.forEach(e=>{ dates.push(e.date); if(e.endDate) dates.push(e.endDate); });
+  allReviewsFlat().forEach(x=>{ if(x.status!=="completed") dates.push(x.review.date); });
+  state.todos.forEach(t=>{ if(t.addToCalendar && t.dueDate) dates.push(t.dueDate); });
+  Object.keys(state.weeklyLog).forEach(d=>{ if((state.weeklyLog[d]||[]).length) dates.push(d); });
+  return dates;
+}
+function upcomingEventsList(limit){
+  const t = todayStr();
+  const dates = [...new Set(allKnownDates())].filter(d=>d>=t).sort();
+  const out = [];
+  for(const d of dates){ const evs = dayEvents(d); evs.forEach(e=>out.push({...e,date:d})); if(out.length>=limit*3) break; }
+  return out.slice(0, limit).map(e=>({...e}));
+}
+
+/* ======================= ACTIONS: navigation ======================= */
+function setView(v){ ui.view=v; ui.subjectDetailId=null; ui.weekDetailNumber=null; ui.sidebarOpen=false; if(v==="calendar") ui.calCategoryFilter="all"; render(); }
 function openSubject(id){ ui.subjectDetailId=id; render(); }
 function backToSubjects(){ ui.subjectDetailId=null; render(); }
 function openWeek(n){ ui.weekDetailNumber=n; render(); }
 function backToWeeks(){ ui.weekDetailNumber=null; render(); }
 function setCalMode(m){ ui.calMode=m; render(); }
-
+function toggleSidebar(){ ui.sidebarOpen=!ui.sidebarOpen; render(); }
+function closeSidebar(){ ui.sidebarOpen=false; render(); }
 function openModal(html){ ui.modal=html; render(); }
 function closeModal(){ ui.modal=null; render(); }
 
+/* ======================= ACTIONS: subjects/chapters ======================= */
 function updateSubject(id, fn){ state.subjects = state.subjects.map(s=> s.id===id ? fn(s) : s); persist(); render(); }
-
+function selectKind(k){
+  window.__subjKind = k;
+  SUBJECT_KINDS.forEach(([key])=>{ const el=document.getElementById('kind-'+key); if(el) el.className = "choice"+(key===k?" on":""); });
+}
 function submitAddSubject(){
   const name = document.getElementById('f-subj-name').value.trim();
   if(!name) return;
   const emoji = document.getElementById('f-subj-emoji').value.trim() || "📘";
   const color = document.getElementById('f-subj-color').value;
+  const kind = window.__subjKind || "نظري";
   const creditHours = document.getElementById('f-subj-hours').value;
   const chapterName = document.getElementById('f-subj-chname').value.trim() || "Chapter 1";
   const chapterPages = document.getElementById('f-subj-chpages').value;
   const chapterMinutes = document.getElementById('f-subj-chmin').value;
-  const s = newSubject({name,emoji,color,creditHours,chapterName,chapterPages,chapterMinutes});
+  const s = newSubject({name,emoji,color,kind,creditHours,chapterName,chapterPages,chapterMinutes});
   state.subjects.push(s); persist();
   closeModal(); ui.subjectDetailId = s.id; ui.view="subjects"; render();
 }
-function pickEmoji(fieldId, e){ document.getElementById(fieldId).value = e; }
 function deleteSubject(id){ state.subjects = state.subjects.filter(s=>s.id!==id); if(ui.subjectDetailId===id) ui.subjectDetailId=null; persist(); closeModal(); render(); }
 function addChapterSubmit(subjectId){
   const name = document.getElementById('f-ch-name').value.trim(); if(!name) return;
@@ -376,6 +459,7 @@ function toggleReview(subjectId, chapterId, reviewId){
   updateSubject(subjectId, s=>({...s, chapters: s.chapters.map(c=> c.id!==chapterId?c:{...c, reviews:c.reviews.map(r=>r.id===reviewId?{...r,completed:!r.completed}:r)})}));
 }
 
+/* ======================= ACTIONS: tests ======================= */
 function saveTestSubmit(editingId){
   const subjectId = document.getElementById('f-test-subject').value;
   const name = document.getElementById('f-test-name').value.trim(); if(!name) return;
@@ -388,6 +472,7 @@ function saveTestSubmit(editingId){
 }
 function deleteTest(subjectId, testId){ updateSubject(subjectId, s=>({...s, tests:s.tests.filter(t=>t.id!==testId)})); closeModal(); }
 
+/* ======================= ACTIONS: weekly log ======================= */
 function saveDayEntrySubmit(dateStr, editingId){
   const subjectId = document.getElementById('f-day-subject').value;
   const title = document.getElementById('f-day-title').value.trim(); if(!title) return;
@@ -395,7 +480,6 @@ function saveDayEntrySubmit(dateStr, editingId){
   const pages = document.getElementById('f-day-pages').value;
   const notes = document.getElementById('f-day-notes').value;
   const linkAsStation = document.getElementById('f-day-link').checked;
-
   let linkedChapterId = editingId ? undefined : null;
   if(linkAsStation && subjectId && title){
     const norm = title.toLowerCase();
@@ -419,6 +503,7 @@ function saveDayEntrySubmit(dateStr, editingId){
 }
 function deleteDayEntry(dateStr, entryId){ state.weeklyLog[dateStr] = (state.weeklyLog[dateStr]||[]).filter(e=>e.id!==entryId); persist(); render(); openDayModal(dateStr); }
 
+/* ======================= ACTIONS: timetable ======================= */
 function saveSlotSubmit(dayIdx, editingId){
   const subjectId = document.getElementById('f-slot-subject').value;
   const label = document.getElementById('f-slot-label').value.trim();
@@ -431,25 +516,112 @@ function saveSlotSubmit(dayIdx, editingId){
   persist(); closeModal(); render();
 }
 function deleteSlot(dayIdx, slotId){ state.timetable[dayIdx] = (state.timetable[dayIdx]||[]).filter(s=>s.id!==slotId); persist(); closeModal(); render(); }
+function handleGridClick(evt, dayIdx){
+  const rect = evt.currentTarget.getBoundingClientRect();
+  const y = evt.clientY - rect.top;
+  const totalMin = TT_START*60 + (y/ROW_H)*60;
+  const snapped = Math.max(TT_START*60, Math.round(totalMin/30)*30);
+  const hh=Math.floor(snapped/60), mm=snapped%60;
+  const start = `${pad(hh)}:${pad(mm)}`;
+  const endTotal = snapped+60; const eh=Math.floor(endTotal/60)%24, em=endTotal%60;
+  const end = `${pad(eh)}:${pad(em)}`;
+  openSlotForm(dayIdx, null, start, end);
+}
 
+/* ======================= ACTIONS: GPA ======================= */
 function addGpaCourse(){ state.gpaCourses.push({id:uid(), name:"مقرر", hours:3, grade:"A", semester:""}); persist(); render(); }
 function updateGpaCourse(id, field, value){ state.gpaCourses = state.gpaCourses.map(c=> c.id===id ? {...c,[field]: field==='hours'?Number(value):value} : c); persist(); render(); }
 function deleteGpaCourse(id){ state.gpaCourses = state.gpaCourses.filter(c=>c.id!==id); persist(); render(); }
 function computeGpa(courses){ const h=courses.reduce((s,c)=>s+(Number(c.hours)||0),0); const p=courses.reduce((s,c)=>s+(GRADE_SCALE[c.grade]||0)*(Number(c.hours)||0),0); return h?p/h:0; }
+function addGpaPrevTerm(){ state.gpaPreviousTerms.push({id:uid(), label:`ترم سابق ${state.gpaPreviousTerms.length+1}`, gpa:null, hours:null}); persist(); render(); }
+function updateGpaPrevTerm(id, field, value){
+  state.gpaPreviousTerms = state.gpaPreviousTerms.map(t=> t.id===id ? {...t, [field]: (field==='gpa'||field==='hours') ? (value===""?null:Number(value)) : value} : t);
+  persist(); render();
+}
+function deleteGpaPrevTerm(id){ state.gpaPreviousTerms = state.gpaPreviousTerms.filter(t=>t.id!==id); persist(); render(); }
+function computeCumulativeGpa(){
+  const newHours = state.gpaCourses.reduce((s,c)=>s+(Number(c.hours)||0),0);
+  const newPoints = state.gpaCourses.reduce((s,c)=>s+(GRADE_SCALE[c.grade]||0)*(Number(c.hours)||0),0);
+  const prevHours = state.gpaPreviousTerms.reduce((s,t)=>s+(Number(t.hours)||0),0);
+  const prevPoints = state.gpaPreviousTerms.reduce((s,t)=>s+((Number(t.gpa)||0)*(Number(t.hours)||0)),0);
+  const totalHours = prevHours + newHours;
+  return totalHours ? (prevPoints+newPoints)/totalHours : 0;
+}
 
+/* ======================= ACTIONS: custom events ======================= */
+function setEventDateType(t){
+  window.__evDateType = t;
+  document.getElementById('evdt-greg').className = "choice"+(t==='greg'?" on":"");
+  document.getElementById('evdt-hijri').className = "choice"+(t==='hijri'?" on":"");
+  document.getElementById('ev-greg-fields').style.display = t==='greg'?'block':'none';
+  document.getElementById('ev-hijri-fields').style.display = t==='hijri'?'block':'none';
+}
 function saveEventSubmit(){
-  const date = document.getElementById('f-ev-date').value;
-  const title = document.getElementById('f-ev-title').value.trim(); if(!title||!date) return;
+  const title = document.getElementById('f-ev-title').value.trim(); if(!title) return;
   const type = document.getElementById('f-ev-type').value;
-  state.customEvents.push({id:uid(), date, title, type});
+  let date, endDate = null;
+  if((window.__evDateType||"greg")==="hijri"){
+    const hd1=document.getElementById('f-ev-hd1').value, hm1=document.getElementById('f-ev-hm1').value, hy1=document.getElementById('f-ev-hy1').value;
+    if(!hd1||!hm1||!hy1) return;
+    date = hToG(Number(hy1),Number(hm1),Number(hd1));
+    const hd2=document.getElementById('f-ev-hd2').value, hm2=document.getElementById('f-ev-hm2').value, hy2=document.getElementById('f-ev-hy2').value;
+    if(hd2&&hm2&&hy2) endDate = hToG(Number(hy2),Number(hm2),Number(hd2));
+  } else {
+    date = document.getElementById('f-ev-date').value; if(!date) return;
+    endDate = document.getElementById('f-ev-date-end').value || null;
+  }
+  if(endDate && endDate<date){ const tmp=date; date=endDate; endDate=tmp; }
+  state.customEvents.push({id:uid(), date, endDate, title, type});
   persist(); closeModal(); render();
 }
 function deleteCustomEvent(id){ state.customEvents = state.customEvents.filter(e=>e.id!==id); persist(); render(); }
 
+/* ======================= ACTIONS: todos ======================= */
+function selectPriority(p){
+  window.__todoPriority = p;
+  Object.keys(PRIORITY).forEach(k=>{ const el=document.getElementById('prio-'+k); if(el) el.className = "choice"+(k===p?" on":""); });
+}
+function setTodoDateType(t){
+  window.__todoDateType = t;
+  document.getElementById('tdt-greg').className = "choice"+(t==='greg'?" on":"");
+  document.getElementById('tdt-hijri').className = "choice"+(t==='hijri'?" on":"");
+  document.getElementById('todo-greg-field').style.display = t==='greg'?'block':'none';
+  document.getElementById('todo-hijri-field').style.display = t==='hijri'?'block':'none';
+}
+function saveTodoSubmit(editingId){
+  const text = document.getElementById('f-todo-text').value.trim(); if(!text) return;
+  let dueDate = null;
+  if((window.__todoDateType||"greg")==="hijri"){
+    const hy = document.getElementById('f-todo-hy')?.value, hm = document.getElementById('f-todo-hm')?.value, hd = document.getElementById('f-todo-hd')?.value;
+    if(hy && hm && hd) dueDate = hToG(Number(hy),Number(hm),Number(hd));
+  } else {
+    dueDate = document.getElementById('f-todo-date').value || null;
+  }
+  const addToCalendar = document.getElementById('f-todo-cal').checked;
+  const priority = window.__todoPriority || "medium";
+  if(editingId) state.todos = state.todos.map(t=> t.id===editingId ? {...t,text,dueDate,addToCalendar,priority} : t);
+  else state.todos.push({id:uid(), text, dueDate, addToCalendar: dueDate?addToCalendar:false, priority, done:false});
+  persist(); closeModal(); render();
+}
+function toggleTodo(id){ state.todos = state.todos.map(t=>t.id===id?{...t,done:!t.done}:t); persist(); render(); }
+function deleteTodo(id){ state.todos = state.todos.filter(t=>t.id!==id); persist(); closeModal(); render(); }
+function sortedTodos(){
+  return [...state.todos].sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    const pa=PRIORITY[a.priority]?.order??1, pb=PRIORITY[b.priority]?.order??1;
+    if(pa!==pb) return pa-pb;
+    if(a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if(a.dueDate) return -1; if(b.dueDate) return 1;
+    return 0;
+  });
+}
+
+/* ======================= ACTIONS: settings ======================= */
 function toggleDark(){ state.darkMode = !state.darkMode; applyTheme(); persist(); render(); }
 function setTimeFormat(f){ state.timeFormat = f; persist(); render(); }
 function setDateSystem(d){ state.dateSystem = d; persist(); render(); }
-function resetAll(){ const dm=state.darkMode, tf=state.timeFormat, ds=state.dateSystem; state = {...defaultState(), darkMode:dm, timeFormat:tf, dateSystem:ds}; persist(); closeModal(); ui={view:"home",subjectDetailId:null,weekDetailNumber:null,calMode:"month",modal:null}; render(); }
+function setFontFamily(f){ state.fontFamily = f; applyFont(); persist(); render(); }
+function resetAll(){ const dm=state.darkMode, tf=state.timeFormat, ds=state.dateSystem; state = {...defaultState(), darkMode:dm, timeFormat:tf, dateSystem:ds}; persist(); closeModal(); ui={view:"home",subjectDetailId:null,weekDetailNumber:null,calMode:"month",modal:null,sidebarOpen:true,reviewFilterSubject:"all",reviewGroupBy:"status",reviewExpanded:null}; render(); }
 
 /* ======================= RENDER: SHELL ======================= */
 function render(){
@@ -459,10 +631,11 @@ function render(){
       ${sidebarHtml()}
       <div class="content">
         ${topbarHtml()}
-        <div class="main">${viewHtml()}</div>
+        <div class="main ${ui.view==='timetable'?'full-width':''}">${viewHtml()}</div>
       </div>
     </div>
-    ${ui.sidebarOpen && isMobile() ? `<div class="sidebar-backdrop" onclick="closeSidebar()"></div>` : ""}
+    <button class="side-arrow" style="right:${ui.sidebarOpen?'210px':'0'}" onclick="toggleSidebar()">${ui.sidebarOpen?'›':'‹'}</button>
+    ${ui.sidebarOpen ? `<div class="sidebar-backdrop" onclick="closeSidebar()"></div>` : ""}
     ${ui.modal ? `<div class="overlay" onclick="if(event.target===this) closeModal()">${ui.modal}</div>` : ""}
   `;
 }
@@ -470,27 +643,23 @@ function sidebarHtml(){
   const items = [
     {id:"home",label:"الرئيسية",ic:"🏠"}, {id:"subjects",label:"المواد",ic:"📚"},
     {id:"weeks",label:"الأسابيع",ic:"🗓️"}, {id:"timetable",label:"الجدول",ic:"📘"},
-    {id:"calendar",label:"التقويم",ic:"📅"}, {id:"reviews",label:"المراجعات",ic:"🔄"},
-    {id:"todos",label:"المهام",ic:"✅"}, {id:"plan",label:"الخطة",ic:"🏁"},
+    {id:"calendar",label:"التقويم والأحداث",ic:"📅"}, {id:"reviews",label:"المراجعات",ic:"🔄"},
+    {id:"todos",label:"المهام",ic:"✅",badge:pendingTodosCount()}, {id:"plan",label:"الخطة",ic:"🏁"},
     {id:"gpa",label:"المعدل",ic:"🧮"}, {id:"stats",label:"الإحصائيات",ic:"📊"},
   ];
   return `
   <aside class="sidebar ${ui.sidebarOpen?'open':''}">
-    <div class="row" style="padding:6px 4px 16px">
-      <div class="side-logo" style="padding:0"><div class="box">🚉</div><div><b class="font-d">Study Stations</b><span>رحلتك بين المحطات</span></div></div>
-      <button class="hamburger" onclick="closeSidebar()" style="display:none" id="side-close">✕</button>
-    </div>
-    ${items.map(it=>`<button class="nav-item ${ui.view===it.id?'active':''}" onclick="setView('${it.id}')"><span class="ic">${it.ic}</span><span>${it.label}</span></button>`).join("")}
+    <div class="side-logo"><div class="box">🚉</div><div><b class="font-d">Study Stations</b><span>رحلتك بين المحطات</span><span style="color:var(--primary);font-weight:700">🎓 2026-2027 · 1448هـ</span></div></div>
+    ${items.map(it=>`<button class="nav-item ${ui.view===it.id?'active':''}" onclick="setView('${it.id}')"><span class="ic">${it.ic}</span><span>${it.label}</span>${it.badge?`<span class="nav-badge">${it.badge}</span>`:""}</button>`).join("")}
     <div class="side-bottom">
       <button class="nav-item" onclick="openSettingsModal()"><span class="ic">⚙️</span><span>الإعدادات</span></button>
     </div>
   </aside>`;
 }
 function topbarHtml(){
-  const titles = {home:"🏠 الرئيسية",subjects:"📚 المواد",weeks:"🗓️ الأسابيع",timetable:"📘 الجدول الدراسي",calendar:"📅 التقويم",reviews:"🔄 المراجعات",todos:"✅ المهام",plan:"🏁 الخطة",gpa:"🧮 حاسبة المعدل",stats:"📊 الإحصائيات"};
+  const titles = {home:"🏠 الرئيسية",subjects:"📚 المواد",weeks:"🗓️ الأسابيع",timetable:"📘 الجدول الدراسي",calendar:"📅 التقويم والأحداث",reviews:"🔄 المراجعات",todos:"✅ المهام",plan:"🏁 الخطة",gpa:"🧮 حاسبة المعدل",stats:"📊 الإحصائيات"};
   return `<div class="topbar">
-    <div style="display:flex;align-items:center;gap:10px">
-      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <div style="display:flex;align-items:center;gap:8px">
       <h1 class="font-d">${titles[ui.view]||""}</h1>
     </div>
     <button onclick="openSettingsModal()" style="font-size:18px">⚙️</button>
@@ -503,6 +672,7 @@ function viewHtml(){
   if(ui.view==="timetable") return timetableView();
   if(ui.view==="calendar") return calendarView();
   if(ui.view==="reviews") return reviewsView();
+  if(ui.view==="todos") return todosView();
   if(ui.view==="plan") return planView();
   if(ui.view==="gpa") return gpaView();
   if(ui.view==="stats") return statsView();
@@ -510,10 +680,21 @@ function viewHtml(){
 }
 
 /* ======================= HOME ======================= */
+function greeting(){
+  const h = new Date().getHours();
+  const g = h<12 ? "صباح الخير ☀️" : h<17 ? "مساء الخير 🌤️" : "مساء الخير 🌙";
+  return g;
+}
 function homeView(){
+  const welcome = `<div class="card" style="background:linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, var(--blue)));color:#fff;border:none;margin-bottom:14px">
+    <p class="font-d" style="font-size:18px;font-weight:800;margin:0">${greeting()} 👋</p>
+    <p style="opacity:.85;font-size:12px;margin:6px 0 0">جاهز لرحلة اليوم بين المحطات؟ كل خطوة صغيرة تقرّبك من هدفك 🚉✨</p>
+  </div>`;
+
   if(state.subjects.length===0){
-    return `<div class="card"><div class="empty"><div class="em">📚</div><div class="t">لا توجد مواد بعد</div><div class="s">أضف أول مادة وابدأ رحلتك بين المحطات! 🚉✨</div></div>
-      <button class="btn" style="width:100%;justify-content:center;margin-top:8px" onclick="openAddSubjectModal()">➕ إضافة مادة الآن</button></div>`;
+    return welcome + `<div class="card"><div class="empty"><div class="em">📚</div><div class="t">لا توجد مواد بعد</div><div class="s">أضف أول مادة وابدأ رحلتك بين المحطات! 🚉✨</div></div>
+      <button class="btn" style="width:100%;justify-content:center;margin-top:8px" onclick="openAddSubjectModal()">➕ إضافة مادة الآن</button></div>
+      <div class="home-grid" style="margin-top:14px"><div class="home-side">${eventsWidget()}${categoriesWidget()}${tasksWidget()}</div></div>`;
   }
   const chapters = allChaptersFlat();
   const total = chapters.length, done = chapters.filter(x=>x.status==="completed").length;
@@ -524,7 +705,7 @@ function homeView(){
   const current = chapters.filter(x=>x.status==="current");
   const dueReviews = allReviewsFlat().filter(x=>x.status==="due");
 
-  return `
+  return welcome + `
   <div class="card" style="background:var(--primary);color:#fff;border:none">
     <div class="row">
       <div><p style="opacity:.7;font-size:11px;margin:0">🔥 التقدم العام</p><p class="font-d" style="font-size:30px;font-weight:800;margin:2px 0">${pct}%</p><p style="opacity:.7;font-size:11px;margin:0">${done} / ${total} محطة مكتملة</p></div>
@@ -537,35 +718,113 @@ function homeView(){
     </div>
   </div>
 
-  <div class="section-title"><h2>📊 تقدم كل مادة</h2></div>
-  <div class="grid">${state.subjects.map(s=>{
-    const d=s.chapters.filter(c=>chapterStatus(s,c)==="completed").length, t=s.chapters.length, p=t?Math.round(d/t*100):0;
-    const pastel = subjectPastel(s.color);
-    return `<div class="card" style="cursor:pointer;border-right:5px solid ${pastel.border}" onclick="setView('subjects');openSubject('${s.id}')">
-      <div class="row"><p style="margin:0;font-weight:700">${s.emoji} ${esc(s.name)}</p><p class="muted" style="margin:0;font-size:12px">${d}/${t} · ${p}%</p></div>
-      <div class="bar" style="margin-top:8px"><i style="width:${p}%;background:var(--primary)"></i></div>
-    </div>`;
-  }).join("")}</div>
+  <div class="home-grid" style="margin-top:14px">
+    <div class="home-side">${eventsWidget()}${categoriesWidget()}${tasksWidget()}</div>
+    <div class="home-main">
+      <div class="section-title" style="margin-top:0"><h2>📊 تقدم كل مادة</h2></div>
+      <div class="grid">${state.subjects.map(s=>{
+        const d=s.chapters.filter(c=>chapterStatus(s,c)==="completed").length, t=s.chapters.length, p=t?Math.round(d/t*100):0;
+        const pastel = subjectPastel(s.color);
+        return `<div class="card" style="cursor:pointer;border-right:5px solid ${pastel.border}" onclick="setView('subjects');openSubject('${s.id}')">
+          <div class="row"><p style="margin:0;font-weight:700">${s.emoji} ${esc(s.name)}</p><p class="muted" style="margin:0;font-size:12px">${d}/${t} · ${p}%</p></div>
+          <div class="bar" style="margin-top:8px"><i style="width:${p}%;background:var(--primary)"></i></div>
+        </div>`;
+      }).join("")}</div>
 
-  <div class="section-title"><h2>🚉 محطة اليوم</h2></div>
-  ${current.length===0 ? `<div class="card"><div class="empty"><div class="em">🚉</div><div class="t">لا توجد محطة نشطة الآن</div></div></div>` :
-    `<div class="grid">${current.map(({subject,chapter})=>{
-      const doneT = chapter.tasks.filter(t=>t.done).length;
-      return `<div class="card" style="cursor:pointer" onclick="setView('subjects');openSubject('${subject.id}')">
-        <div class="row"><div><p class="muted" style="margin:0;font-size:11px">${subject.emoji} ${esc(subject.name)}</p><p class="font-d" style="margin:2px 0 0;font-weight:800">${esc(chapter.name)}</p></div><div style="background:color-mix(in srgb, var(--gold) 20%, transparent);border-radius:50%;padding:8px">🚉</div></div>
-        <div class="bar" style="margin-top:8px"><i style="width:${Math.round(doneT/chapter.tasks.length*100)}%;background:var(--gold)"></i></div>
-        <p class="muted" style="font-size:11px;margin:6px 0 0">${doneT} / ${chapter.tasks.length} مهام منجزة</p>
-      </div>`;
-    }).join("")}</div>`}
+      <div class="section-title"><h2>🚉 محطة اليوم</h2></div>
+      ${current.length===0 ? `<div class="card"><div class="empty"><div class="em">🚉</div><div class="t">لا توجد محطة نشطة الآن</div></div></div>` :
+        `<div class="grid">${current.map(({subject,chapter})=>{
+          const doneT = chapter.tasks.filter(t=>t.done).length;
+          return `<div class="card" style="cursor:pointer" onclick="setView('subjects');openSubject('${subject.id}')">
+            <div class="row"><div><p class="muted" style="margin:0;font-size:11px">${subject.emoji} ${esc(subject.name)}</p><p class="font-d" style="margin:2px 0 0;font-weight:800">${esc(chapter.name)}</p></div><div style="background:color-mix(in srgb, var(--gold) 20%, transparent);border-radius:50%;padding:8px">🚉</div></div>
+            <div class="bar" style="margin-top:8px"><i style="width:${Math.round(doneT/chapter.tasks.length*100)}%;background:var(--gold)"></i></div>
+            <p class="muted" style="font-size:11px;margin:6px 0 0">${doneT} / ${chapter.tasks.length} مهام منجزة</p>
+          </div>`;
+        }).join("")}</div>`}
 
-  <div class="section-title"><h2>🔄 المراجعات المستحقة اليوم</h2></div>
-  ${dueReviews.length===0 ? `<div class="card"><p class="muted" style="text-align:center;margin:6px 0">لا توجد مراجعات مستحقة اليوم 🎉</p></div>` :
-    `<div class="card grid">${dueReviews.map(x=>`<div class="row" style="border-bottom:1px solid var(--track);padding-bottom:6px"><div><p class="muted" style="margin:0;font-size:11px">${x.subject.emoji} ${esc(x.subject.name)}</p><p style="margin:0;font-weight:700;font-size:13px">${esc(x.chapter.name)}</p></div>${pill('due')}</div>`).join("")}</div>`}
-
-  ${nearest ? `<div class="section-title"><h2>🏁 أقرب اختبار</h2></div>
-  <div class="card row"><div><p class="muted" style="margin:0;font-size:11px">${nearest.subject.emoji} ${esc(nearest.subject.name)}</p><p class="font-d" style="margin:2px 0;font-weight:800">${esc(nearest.test.name)}</p><p class="muted" style="margin:0;font-size:11px">${displayDate(nearest.test.date)}</p></div>
-    <div style="background:var(--track);border-radius:16px;padding:8px 12px;text-align:center"><p class="font-d" style="font-weight:800;color:var(--red);margin:0;font-size:19px">${daysLeft}</p><p class="muted" style="margin:0;font-size:9px">يوم</p></div></div>` : ""}
+      <div class="section-title"><h2>🔄 المراجعات المستحقة اليوم</h2></div>
+      ${dueReviews.length===0 ? `<div class="card"><p class="muted" style="text-align:center;margin:6px 0">لا توجد مراجعات مستحقة اليوم 🎉</p></div>` :
+        `<div class="card grid">${dueReviews.map(x=>`<div class="row" style="border-bottom:1px solid var(--track);padding-bottom:6px"><div><p class="muted" style="margin:0;font-size:11px">${x.subject.emoji} ${esc(x.subject.name)}</p><p style="margin:0;font-weight:700;font-size:13px">${esc(x.chapter.name)}</p></div>${pill('due')}</div>`).join("")}</div>`}
+    </div>
+  </div>
   `;
+}
+const CATEGORY_PLAIN_LABELS = { occasion:"مناسبات", holiday:"إجازات", test:"اختبارات", lecture:"محاضرات", task:"مهام", reminder:"تذكيرات", other:"أخرى" };
+function categoryCounts(){
+  const counts = { occasion:0, holiday:0, test:0, lecture:0, task:0, reminder:0, other:0 };
+  KEY_DATES.forEach(kd=>{ if(counts[kd.type]!==undefined) counts[kd.type]++; });
+  allTestsFlat().forEach(()=>counts.test++);
+  Object.values(state.weeklyLog).forEach(entries=>{ counts.lecture += (entries||[]).length; });
+  allReviewsFlat().forEach(()=>counts.reminder++);
+  state.todos.forEach(t=>{ if(t.addToCalendar && t.dueDate) counts.task++; });
+  state.customEvents.forEach(e=>{ if(counts[e.type]!==undefined) counts[e.type]++; });
+  return counts;
+}
+function filterCalendarByCategory(type){ ui.calCategoryFilter = type; ui.calMode = "list"; ui.view = "calendar"; ui.subjectDetailId=null; ui.weekDetailNumber=null; ui.sidebarOpen=false; render(); }
+function categoriesWidget(){
+  const counts = categoryCounts();
+  const keys = ["occasion","holiday","test","lecture","task","reminder","other"];
+  const markerHtml = (k)=> k==="task"
+    ? `<i style="width:12px;height:3px;border-radius:2px;background:var(${EVENT_COLORS[k].v});display:inline-block;flex-shrink:0"></i>`
+    : `<i style="width:8px;height:8px;border-radius:50%;background:var(${EVENT_COLORS[k].v});display:inline-block;flex-shrink:0"></i>`;
+  return `
+  <div class="card widget-narrow" style="margin-top:14px">
+    <p class="font-d" style="font-weight:800;font-size:14px;margin:0 0 12px">🏷️ الفئات</p>
+    <div class="grid" style="gap:8px">
+    ${keys.map(k=>`<button class="row" onclick="filterCalendarByCategory('${k}')" style="background:color-mix(in srgb, var(${EVENT_COLORS[k].v}) 16%, var(--card));border-radius:16px;padding:12px 16px;width:100%">
+      <span style="background:color-mix(in srgb, var(${EVENT_COLORS[k].v}) 25%, var(--card));color:var(${EVENT_COLORS[k].v});border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800">${counts[k]}</span>
+      <span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(${EVENT_COLORS[k].v})">${markerHtml(k)} ${CATEGORY_PLAIN_LABELS[k]}</span>
+    </button>`).join("")}
+    </div>
+  </div>`;
+}
+function eventsWidget(){
+  const events = upcomingEventsList(4);
+  const t = todayStr();
+  const todayBadge = `<div style="background:var(--track);border-radius:12px;padding:4px 10px;text-align:center;min-width:44px">
+    <p style="color:var(--red);font-size:9px;font-weight:800;margin:0">${gMonth(t).slice(0,3)}</p>
+    <p class="font-d" style="font-weight:800;font-size:17px;margin:0">${gDay(t)}</p>
+  </div>`;
+  return `
+  <div class="card widget-narrow" style="margin-top:14px">
+    <div class="row" style="margin-bottom:12px">
+      <p class="font-d" style="font-weight:800;font-size:14px;margin:0">🗓️ الأحداث القادمة</p>
+      ${todayBadge}
+    </div>
+    ${events.length===0? `<p class="muted-i" style="font-size:12px;text-align:center;padding:10px 0">لا توجد أحداث قادمة</p>` :
+      events.map((e,i)=>`<div class="row" style="padding:10px 0;${i<events.length-1?'border-bottom:1px solid var(--track)':''}">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <i style="width:8px;height:8px;border-radius:50%;background:var(${EVENT_COLORS[e.type].v});flex-shrink:0"></i>
+          <div style="min-width:0">
+            <p style="margin:0;font-weight:700;font-size:13px">${esc(e.label)}</p>
+            <p class="muted" style="margin:2px 0 0;font-size:11px">${displayDate(e.date)}</p>
+          </div>
+        </div>
+        <div style="text-align:center;flex-shrink:0">
+          <p class="font-d" style="font-weight:800;font-size:18px;margin:0">${Math.abs(daysBetween(t,e.date))}</p>
+          <p class="muted-i" style="font-size:9px;margin:0">${daysBetween(t,e.date)===0?"اليوم":"أيام"}</p>
+        </div>
+      </div>`).join("")}
+    <button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="ui.calMode='list';setView('calendar')">عرض جميع الأحداث</button>
+  </div>`;
+}
+function tasksWidget(){
+  const todos = sortedTodos().filter(t=>!t.done).slice(0,4);
+  const count = pendingTodosCount();
+  return `
+  <div class="card widget-narrow" style="margin-top:14px">
+    <div class="row" style="margin-bottom:12px">
+      <p class="font-d" style="font-weight:800;font-size:14px;margin:0">✅ أهم المهام</p>
+      <button class="btn icon sm" style="background:var(--green)" onclick="openTodoFormModal()" title="إضافة مهمة">➕</button>
+    </div>
+    ${todos.length===0? `<p class="muted-i" style="font-size:12px;text-align:center;padding:10px 0">لا توجد مهام معلّقة 🎉</p>` :
+      `<div class="grid" style="gap:8px">${todos.map(t=>`<div class="row" style="border-left:4px solid var(${PRIORITY[t.priority].v});padding:6px 10px 6px 0;background:var(--track);border-radius:10px">
+        <button onclick="toggleTodo('${t.id}')" class="todo-check"></button>
+        <span style="flex:1;font-size:13px;text-align:right;padding:0 8px">${esc(t.text)}</span>
+        <span class="pill" style="background:color-mix(in srgb, var(${PRIORITY[t.priority].v}) 18%, var(--card));color:var(${PRIORITY[t.priority].v})">${PRIORITY[t.priority].label.split(" ")[1]}</span>
+      </div>`).join("")}</div>`}
+    <button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="setView('todos')">عرض كل المهام</button>
+  </div>`;
 }
 
 /* ======================= SUBJECTS ======================= */
@@ -576,11 +835,12 @@ function subjectsView(){
   <div class="grid">${state.subjects.map(s=>{
     const d=s.chapters.filter(c=>chapterStatus(s,c)==="completed").length, t=s.chapters.length, p=t?Math.round(d/t*100):0;
     const pastel = subjectPastel(s.color);
+    const kindTag = SUBJECT_KINDS.find(k=>k[0]===s.kind)?.[1] || "📖 نظري";
     return `<div class="card" style="cursor:pointer;padding:0;overflow:hidden;border-right:6px solid ${pastel.border}" onclick="openSubject('${s.id}')">
       <div style="padding:14px">
         <div class="row"><p class="font-d" style="margin:0;font-weight:800;font-size:15px">${s.emoji} ${esc(s.name)}</p><span class="muted-i">‹</span></div>
         <div class="bar" style="margin-top:8px"><i style="width:${p}%;background:var(--primary)"></i></div>
-        <p class="muted" style="font-size:11px;margin:6px 0 0">${d} / ${t} محطة · ${p}%${s.creditHours?` · 🎯 ${s.creditHours} ساعات`:""}</p>
+        <p class="muted" style="font-size:11px;margin:6px 0 0">${d} / ${t} محطة · ${p}% · ${kindTag}${s.creditHours?` · 🎯 ${s.creditHours} ساعات`:""}</p>
       </div></div>`;
   }).join("")}</div>`}
   `;
@@ -588,13 +848,14 @@ function subjectsView(){
 function subjectDetailView(subjectId){
   const subject = state.subjects.find(s=>s.id===subjectId);
   if(!subject) return `<p>غير موجودة</p>`;
+  const kindTag = SUBJECT_KINDS.find(k=>k[0]===subject.kind)?.[1] || "📖 نظري";
   return `
   <div class="row" style="margin-bottom:10px">
     <button onclick="backToSubjects()" style="color:var(--primary);font-weight:700;font-size:13px">‹ رجوع</button>
     <button onclick="openDeleteSubjectModal('${subjectId}')" style="color:var(--red)">🗑️</button>
   </div>
   <h2 class="font-d" style="font-weight:800;font-size:18px;margin:0 0 4px">${subject.emoji} ${esc(subject.name)}</h2>
-  ${subject.creditHours?`<p class="muted" style="font-size:12px;margin:0 0 14px">🎯 ${subject.creditHours} ساعات معتمدة</p>`:`<div style="margin-bottom:14px"></div>`}
+  <p class="muted" style="font-size:12px;margin:0 0 14px">${kindTag}${subject.creditHours?` · 🎯 ${subject.creditHours} ساعات معتمدة`:""}</p>
 
   <div class="grid" style="gap:8px">
     ${subject.chapters.map(c=>{
@@ -703,11 +964,11 @@ function openDayEntryForm(dateStr, editingId){
   openModal(modalWrap(editingId?"تعديل السجل":"✏️ إضافة ما تم أخذه", body));
 }
 
-/* ======================= TIMETABLE (image-style grid, Sun–Thu, lecture kind) ======================= */
+/* ======================= TIMETABLE (7 days, click-to-place, wrap-friendly blocks) ======================= */
 const TT_START=7, TT_END=22, ROW_H=48;
-const TT_DAYS = [0,1,2,3,4]; // Sunday .. Thursday only
 function timetableView(){
   if(state.subjects.length===0) return `<div class="card"><div class="empty"><div class="em">📘</div><div class="t">أضف مادة أولًا</div><div class="s">لتتمكن من بناء جدولك الدراسي.</div></div></div>`;
+  const TT_DAYS = [0,1,2,3,4]; // الأحد إلى الخميس فقط
   const totalH = (TT_END-TT_START)*ROW_H;
   let hourRows = "";
   for(let h=TT_START; h<TT_END; h++){ hourRows += `<div class="tt-hourline tt-timelabel" style="top:${(h-TT_START)*ROW_H}px;height:${ROW_H}px">${pad(h)}:00 - ${pad(h+1)}:00</div>`; }
@@ -720,14 +981,16 @@ function timetableView(){
       const subj = state.subjects.find(x=>x.id===s.subjectId); if(!subj) return "";
       const pastel = subjectPastel(subj.color);
       const top = Math.max(0,(timeToMin(s.start||"08:00") - TT_START*60)/60*ROW_H);
-      const height = Math.max(((timeToMin(s.end||"09:00")-timeToMin(s.start||"08:00"))/60)*ROW_H - 3, 26);
+      const height = Math.max(((timeToMin(s.end||"09:00")-timeToMin(s.start||"08:00"))/60)*ROW_H - 3, 36);
       const kindTag = s.kind==="عملي" ? "🧪 عملي" : "📖 نظري";
-      return `<button class="tt-block" onclick="openSlotForm(${d},'${s.id}')" style="top:${top}px;height:${height}px;background:${pastel.bg};border-color:${pastel.border};color:var(--text)">
-        <b>${esc(subj.name)}</b><span>${fmtTime(s.start)}-${fmtTime(s.end)}</span><span>${kindTag}</span></button>`;
+      const fullTitle = `${subj.name}${s.label?" — "+s.label:""}`;
+      return `<button class="tt-block" title="${esc(fullTitle)}" onclick="event.stopPropagation();openSlotForm(${d},'${s.id}')" style="top:${top}px;height:${height}px;background:${pastel.bg};border-color:${pastel.border};color:var(--text)">
+        <b>${esc(subj.name)}${s.label?` · ${esc(s.label)}`:""}</b><span>${fmtTime(s.start)}-${fmtTime(s.end)}</span><span>${kindTag}</span></button>`;
     }).join("");
-    cols += `<div class="tt-col ${ci%2===0?'zebra':''}" style="height:${totalH}px">${lines}${blocks}</div>`;
+    cols += `<div class="tt-col ${ci%2===0?'zebra':''}" style="height:${totalH}px" onclick="handleGridClick(event,${d})">${lines}${blocks}</div>`;
   });
   return `
+  <p class="muted" style="font-size:11px;margin:0 0 10px">💡 اضغط في أي مكان فارغ من الجدول لإضافة حصة في ذلك الوقت مباشرة</p>
   <div class="tt-wrap"><div class="tt-grid" style="grid-template-columns:64px repeat(5,1fr)">
     <div class="tt-head"></div>
     ${TT_DAYS.map(d=>`<div class="tt-head">${WEEKDAYS_AR[d]}</div>`).join("")}
@@ -737,16 +1000,16 @@ function timetableView(){
   <div class="tt-addrow">${TT_DAYS.map(d=>`<button class="tt-addbtn" onclick="openSlotForm(${d},null)">➕ ${WEEKDAYS_AR[d]}</button>`).join("")}</div>
   `;
 }
-function openSlotForm(dayIdx, slotId){
+function openSlotForm(dayIdx, slotId, prefillStart, prefillEnd){
   const slot = slotId ? (state.timetable[dayIdx]||[]).find(s=>s.id===slotId) : null;
   const body = `
   <div class="field"><label>المادة</label><select id="f-slot-subject">${state.subjects.map(s=>`<option value="${s.id}" ${slot?.subjectId===s.id?"selected":""}>${s.emoji} ${esc(s.name)}</option>`).join("")}</select></div>
   <div class="field"><label>نوع المحاضرة</label><select id="f-slot-kind"><option value="نظري" ${slot?.kind!=="عملي"?"selected":""}>📖 نظري</option><option value="عملي" ${slot?.kind==="عملي"?"selected":""}>🧪 عملي</option></select></div>
   <div class="two-col">
-    <div class="field"><label>من الساعة</label><input id="f-slot-start" type="time" value="${slot?.start||"08:00"}"></div>
-    <div class="field"><label>إلى الساعة</label><input id="f-slot-end" type="time" value="${slot?.end||"09:00"}"></div>
+    <div class="field"><label>من الساعة</label><input id="f-slot-start" type="time" value="${slot?.start||prefillStart||"08:00"}"></div>
+    <div class="field"><label>إلى الساعة</label><input id="f-slot-end" type="time" value="${slot?.end||prefillEnd||"09:00"}"></div>
   </div>
-  <div class="field"><label>ملاحظة (اختياري)</label><input id="f-slot-label" value="${esc(slot?.label||"")}" placeholder="مثال: قاعة 204"></div>
+  <div class="field"><label>ملاحظة (اختياري — أي نص، مثل اسم القاعة أو الأستاذ)</label><textarea id="f-slot-label" rows="2" placeholder="مثال: قاعة 204 مع د. أحمد">${esc(slot?.label||"")}</textarea></div>
   <div class="row" style="gap:8px">
     <button class="btn" style="flex:1;justify-content:center" onclick="saveSlotSubmit(${dayIdx}${slotId?`,'${slotId}'`:',null'})">💾 حفظ</button>
     ${slotId?`<button class="btn danger" onclick="deleteSlot(${dayIdx},'${slotId}')">🗑️</button>`:""}
@@ -754,11 +1017,11 @@ function openSlotForm(dayIdx, slotId){
   openModal(modalWrap(`📘 حصة يوم ${WEEKDAYS_AR[dayIdx]}`, body));
 }
 
-/* ======================= CALENDAR (month + list, custom events, test linking) ======================= */
+/* ======================= CALENDAR (month + list, custom events, test linking, full range + countdown) ======================= */
 function calendarView(){
   const seg = `<div class="section-title">
     <div class="seg" style="max-width:220px"><button class="${ui.calMode==='month'?'on':''}" onclick="setCalMode('month')">📅 شهري</button><button class="${ui.calMode==='list'?'on':''}" onclick="setCalMode('list')">📋 قائمة</button></div>
-    <button class="btn sm" onclick="openAddEventModal()">➕ إضافة حدث</button>
+    <button class="btn sm rose" onclick="openAddEventModal()">➕ إضافة حدث</button>
   </div>`;
   return seg + (ui.calMode==="list" ? calendarListView() : calendarMonthView());
 }
@@ -766,7 +1029,8 @@ function calendarMonthView(){
   const monthLabel = `${MONTHS_AR[calCursor.m]} ${calCursor.y}`;
   const firstDow = new Date(calCursor.y, calCursor.m, 1).getDay();
   const daysInMonth = new Date(calCursor.y, calCursor.m+1, 0).getDate();
-  const cells = [...Array(firstDow).fill(null), ...Array.from({length:daysInMonth},(_,i)=>`${calCursor.y}-${pad(calCursor.m+1)}-${pad(i+1)}`)];
+  let cells = [...Array(firstDow).fill(null), ...Array.from({length:daysInMonth},(_,i)=>`${calCursor.y}-${pad(calCursor.m+1)}-${pad(i+1)}`)];
+  while(cells.length % 7 !== 0) cells.push(null);
   return `
   <div class="card">
     <div class="cal-head"><button onclick="calPrev()" style="color:var(--primary);font-size:16px">›</button><p class="font-d" style="font-weight:800;margin:0;font-size:14px">${monthLabel}</p><button onclick="calNext()" style="color:var(--primary);font-size:16px">‹</button></div>
@@ -781,27 +1045,34 @@ function calendarMonthView(){
   </div>`;
 }
 function calendarListView(){
-  const from = addDays(todayStr(),-7), to = addDays(todayStr(),60);
+  const known = [...new Set(allKnownDates())];
+  const t = todayStr();
+  const minKnown = known.length? known.reduce((a,b)=>a<b?a:b) : t;
+  const maxKnown = known.length? known.reduce((a,b)=>a>b?a:b) : addDays(t,30);
+  const from = minKnown < addDays(t,-14) ? minKnown : addDays(t,-14);
+  const to = maxKnown > addDays(t,14) ? maxKnown : addDays(t,14);
   const map = {};
   let d = from;
-  while(d<=to){ const evs = dayEvents(d); if(evs.length) map[d]=evs; d = addDays(d,1); }
+  let guard = 0;
+  const filter = ui.calCategoryFilter||"all";
+  while(d<=to && guard<1000){
+    let evs = dayEvents(d);
+    if(filter!=="all") evs = evs.filter(e=>e.type===filter);
+    if(evs.length) map[d]=evs;
+    d = addDays(d,1); guard++;
+  }
   const dates = Object.keys(map).sort();
-  if(dates.length===0) return `<div class="card"><div class="empty"><div class="em">📋</div><div class="t">لا توجد أحداث قريبة</div></div></div>`;
-  return `<div class="grid">${dates.map(dt=>`<div class="card"><p style="color:var(--primary);font-weight:800;font-size:12px;margin:0 0 8px">${displayDate(dt)}</p>
+  const filterChip = filter!=="all" ? `<div class="row" style="background:var(--track);border-radius:14px;padding:8px 12px;margin-bottom:10px">
+    <span style="font-size:12px;font-weight:700;color:var(${EVENT_COLORS[filter].v})">🏷️ مصفّاة حسب: ${CATEGORY_PLAIN_LABELS[filter]}</span>
+    <button onclick="filterCalendarByCategory('all')" style="font-size:11px;color:var(--muted);font-weight:700">✕ إلغاء</button>
+  </div>` : "";
+  if(dates.length===0) return filterChip + `<div class="card"><div class="empty"><div class="em">📋</div><div class="t">لا توجد أحداث${filter!=="all"?" لهذه الفئة":" بعد"}</div><div class="s">${filter!=="all"?"":"أضيفي اختبارات أو أحداثًا لتظهر هنا."}</div></div></div>`;
+  return filterChip + `<div class="grid">${dates.map(dt=>`<div class="card ${dt===t?'hl':''}"><div class="row" style="margin-bottom:8px"><p style="color:var(--primary);font-weight:800;font-size:12px;margin:0">${displayDate(dt)}</p><span class="muted-i" style="font-size:10px">${countdownLabel(dt)}</span></div>
     ${map[dt].map(e=>`<div class="row" style="justify-content:flex-start;gap:8px;margin-bottom:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(${EVENT_COLORS[e.type].v});flex-shrink:0"></span><span style="font-size:13px">${esc(e.label)}</span></div>`).join("")}
     </div>`).join("")}</div>`;
 }
 function calPrev(){ calCursor = calCursor.m===0?{y:calCursor.y-1,m:11}:{y:calCursor.y,m:calCursor.m-1}; render(); }
 function calNext(){ calCursor = calCursor.m===11?{y:calCursor.y+1,m:0}:{y:calCursor.y,m:calCursor.m+1}; render(); }
-function dayEvents(dateStr){
-  const evs = [];
-  KEY_DATES.forEach(kd=>{ if(dateStr>=kd.start && dateStr<=kd.end) evs.push({type:kd.type,label:`${kd.emoji} ${kd.title}`}); });
-  allTestsFlat().forEach(x=>{ if(x.test.date===dateStr) evs.push({type:"test",label:`🏁 ${x.test.name} — ${x.subject.name}`, testId:x.test.id, subjectId:x.subject.id}); });
-  (state.weeklyLog[dateStr]||[]).forEach(e=>{ const subj=state.subjects.find(s=>s.id===e.subjectId); evs.push({type:"lecture",label:`📘 ${e.title} — ${subj?.name||""}`}); });
-  allReviewsFlat().forEach(x=>{ if(x.review.date===dateStr) evs.push({type:"reminder",label:`🔔 مراجعة ${x.chapter.name} — ${x.subject.name}`}); });
-  state.customEvents.forEach(e=>{ if(e.date===dateStr) evs.push({type:e.type,label:`${EVENT_COLORS[e.type].label.split(" ")[0]} ${e.title}`, customId:e.id}); });
-  return evs;
-}
 function openDayEventsModal(dateStr){
   const evs = dayEvents(dateStr);
   const body = `
@@ -818,42 +1089,195 @@ function openDayEventsModal(dateStr){
 }
 function openAddEventModal(dateStr){
   const body = `
-  <div class="field"><label>العنوان</label><input id="f-ev-title" placeholder="مثال: تسليم بحث"></div>
-  <div class="field"><label>التاريخ</label><input id="f-ev-date" type="date" value="${dateStr||todayStr()}"></div>
-  <div class="field"><label>النوع</label><select id="f-ev-type">${EVENT_TYPE_OPTIONS.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
-  <button class="btn" style="width:100%;justify-content:center" onclick="saveEventSubmit()">➕ إضافة الحدث</button>
+  <div class="field"><label>عنوان الحدث</label><input id="f-ev-title" placeholder="مثال: تسليم بحث"></div>
+  <div class="field"><label>الفئة</label><select id="f-ev-type">${EVENT_TYPE_OPTIONS.map(([k,l])=>`<option value="${k}">${l}</option>`).join("")}</select></div>
+  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">نوع التاريخ</label>
+  <div class="row" style="gap:6px;margin-bottom:12px">
+    <button id="evdt-greg" class="choice on" onclick="setEventDateType('greg')">ميلادي</button>
+    <button id="evdt-hijri" class="choice" onclick="setEventDateType('hijri')">هجري</button>
+  </div>
+  <div id="ev-greg-fields">
+    <div class="field"><label>من تاريخ</label><input id="f-ev-date" type="date" value="${dateStr||todayStr()}"></div>
+    <div class="field"><label>إلى تاريخ (اختياري — للأحداث ذات المدة الطويلة)</label><input id="f-ev-date-end" type="date"></div>
+  </div>
+  <div id="ev-hijri-fields" style="display:none">
+    <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">من تاريخ (هجري)</label>
+    <div class="two-col" style="gap:6px;margin-bottom:11px">
+      <div class="field" style="margin-bottom:0"><input id="f-ev-hd1" type="number" min="1" max="30" placeholder="يوم"></div>
+      <div class="field" style="margin-bottom:0"><select id="f-ev-hm1">${HIJRI_MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("")}</select></div>
+      <div class="field" style="margin-bottom:0"><select id="f-ev-hy1">${hijriYearOptions()}</select></div>
+    </div>
+    <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">إلى تاريخ (هجري، اختياري)</label>
+    <div class="two-col" style="gap:6px">
+      <div class="field" style="margin-bottom:0"><input id="f-ev-hd2" type="number" min="1" max="30" placeholder="يوم"></div>
+      <div class="field" style="margin-bottom:0"><select id="f-ev-hm2">${HIJRI_MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("")}</select></div>
+      <div class="field" style="margin-bottom:0"><select id="f-ev-hy2">${hijriYearOptions()}</select></div>
+    </div>
+  </div>
+  <button class="btn rose" style="width:100%;justify-content:center;margin-top:6px" onclick="saveEventSubmit()">➕ إضافة الحدث</button>
   `;
   openModal(modalWrap("🗓️ حدث جديد", body));
+  window.__evDateType = "greg";
 }
 
-/* ======================= REVIEWS (simpler & clearer) ======================= */
-function reviewsView(){
-  const all = allReviewsFlat();
-  const late = all.filter(x=>x.status==="late"), due = all.filter(x=>x.status==="due");
-  const upcoming = all.filter(x=>x.status==="upcoming").sort((a,b)=>a.review.date.localeCompare(b.review.date)).slice(0,15);
-  const completed = all.filter(x=>x.status==="completed");
-  const totalActive = late.length+due.length+upcoming.length+completed.length;
-
-  const row = (x)=>`<div class="row" style="background:var(--track);border-radius:14px;padding:10px 12px">
+/* ======================= REVIEWS ======================= */
+function setReviewFilterSubject(v){ ui.reviewFilterSubject=v; ui.reviewExpanded=null; render(); }
+function setReviewGroupBy(v){ ui.reviewGroupBy=v; ui.reviewExpanded=null; render(); }
+function toggleReviewExpanded(key){ ui.reviewExpanded = ui.reviewExpanded===key ? null : key; render(); }
+function reviewRow(x, showChapter){
+  return `<div class="row" style="background:var(--track);border-radius:14px;padding:10px 12px">
     <button onclick="toggleReview('${x.subject.id}','${x.chapter.id}','${x.review.id}')" class="rev-check ${x.status==='completed'?'done':''}">${x.status==='completed'?"✔":""}</button>
     <div style="flex:1;min-width:0">
-      <p style="margin:0;font-weight:700;font-size:13px;${x.status==='completed'?'text-decoration:line-through;color:var(--muted-icon)':''}">${esc(x.chapter.name)}</p>
-      <p class="muted" style="margin:2px 0 0;font-size:11px">${x.subject.emoji} ${esc(x.subject.name)} · ${displayDate(x.review.date)}</p>
+      ${showChapter!==false?`<p style="margin:0;font-weight:700;font-size:13px;${x.status==='completed'?'text-decoration:line-through;color:var(--muted-icon)':''}">${esc(x.chapter.name)}</p>
+      <p class="muted" style="margin:2px 0 0;font-size:11px">${x.subject.emoji} ${esc(x.subject.name)} · ${displayDate(x.review.date)}</p>`:
+      `<p style="margin:0;font-weight:700;font-size:13px;${x.status==='completed'?'text-decoration:line-through;color:var(--muted-icon)':''}">${displayDate(x.review.date)}</p>`}
     </div>
     ${pill(x.status)}
   </div>`;
+}
+function reviewsView(){
+  const filterSubject = ui.reviewFilterSubject;
+  const groupBy = ui.reviewGroupBy;
+  const all = allReviewsFlat().filter(x=> filterSubject==="all" || x.subject.id===filterSubject);
+  const late = all.filter(x=>x.status==="late"), due = all.filter(x=>x.status==="due");
+  const upcoming = all.filter(x=>x.status==="upcoming").sort((a,b)=>a.review.date.localeCompare(b.review.date));
+  const completed = all.filter(x=>x.status==="completed");
+  const totalActive = late.length+due.length+upcoming.length+completed.length;
 
-  return `
-  <div class="card" style="background:var(--primary);color:#fff;text-align:center;padding:16px;margin-bottom:14px">
-    <p style="opacity:.7;font-size:11px;margin:0">✅ مكتملة من إجمالي المراجعات النشطة</p>
+  const filterBar = `
+  <div class="card" style="margin-bottom:14px">
+    <div class="two-col" style="margin-bottom:0">
+      <div class="field" style="margin-bottom:0">
+        <label>تصفية حسب المادة</label>
+        <select onchange="setReviewFilterSubject(this.value)">
+          <option value="all" ${filterSubject==="all"?"selected":""}>🔎 كل المواد</option>
+          ${state.subjects.map(s=>`<option value="${s.id}" ${filterSubject===s.id?"selected":""}>${s.emoji} ${esc(s.name)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>تصنيف حسب</label>
+        <div class="seg">
+          <button class="${groupBy==='status'?'on':''}" onclick="setReviewGroupBy('status')">الحالة</button>
+          <button class="${groupBy==='subject'?'on':''}" onclick="setReviewGroupBy('subject')">المادة</button>
+          <button class="${groupBy==='chapter'?'on':''}" onclick="setReviewGroupBy('chapter')">المحطة</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  const summary = `<div class="card" style="background:var(--blue);color:#fff;text-align:center;padding:16px;margin-bottom:14px">
+    <p style="opacity:.8;font-size:11px;margin:0">✅ مكتملة من إجمالي المراجعات النشطة</p>
     <p class="font-d" style="font-size:24px;font-weight:800;margin:4px 0">${completed.length} / ${totalActive}</p>
-  </div>
-  ${late.length>0?`<div class="section-title"><h2>⚠️ مراجعات متأخرة</h2></div><div class="grid">${late.map(row).join("")}</div>`:""}
-  <div class="section-title"><h2>🔥 مراجعات اليوم</h2></div>
-  ${due.length===0?`<div class="card"><p class="muted" style="text-align:center;margin:6px 0">لا توجد مراجعات مستحقة اليوم 🎉</p></div>`:`<div class="grid">${due.map(row).join("")}</div>`}
-  <div class="section-title"><h2>📅 المراجعات القادمة</h2></div>
-  ${upcoming.length===0?`<div class="card"><div class="empty"><div class="em">📅</div><div class="t">لا توجد مراجعات قادمة بعد</div></div></div>`:`<div class="grid">${upcoming.map(row).join("")}</div>`}
+  </div>`;
+
+  if(all.length===0){
+    return filterBar + `<div class="card"><div class="empty"><div class="em">🔄</div><div class="t">لا توجد مراجعات لهذه التصفية</div></div></div>`;
+  }
+
+  if(groupBy==="subject"){
+    const bySubject = {};
+    all.forEach(x=>{ (bySubject[x.subject.id]=bySubject[x.subject.id]||{subject:x.subject,items:[]}).items.push(x); });
+    return filterBar + summary + Object.values(bySubject).map(g=>{
+      const sorted = g.items.slice().sort((a,b)=>a.review.date.localeCompare(b.review.date));
+      const done = g.items.filter(x=>x.status==="completed").length;
+      const key = "s:"+g.subject.id;
+      const isOpen = ui.reviewExpanded===key;
+      return `<button onclick="toggleReviewExpanded('${key}')" style="width:100%;text-align:right;margin-bottom:8px">
+        <div class="card row">
+          <p style="margin:0;font-weight:700;font-size:13px">${g.subject.emoji} ${esc(g.subject.name)}</p>
+          <div style="display:flex;align-items:center;gap:8px"><span class="muted" style="font-size:11px">${done}/${g.items.length}</span><span class="muted-i">${isOpen?"▲":"▼"}</span></div>
+        </div></button>
+        ${isOpen?`<div class="grid" style="margin-bottom:10px">${sorted.map(x=>reviewRow(x,true)).join("")}</div>`:""}`;
+    }).join("");
+  }
+
+  if(groupBy==="chapter"){
+    const byChapter = {};
+    all.forEach(x=>{ (byChapter[x.chapter.id]=byChapter[x.chapter.id]||{subject:x.subject,chapter:x.chapter,items:[]}).items.push(x); });
+    return filterBar + summary + Object.values(byChapter).map(g=>{
+      const sorted = g.items.slice().sort((a,b)=>a.review.date.localeCompare(b.review.date));
+      const done = g.items.filter(x=>x.status==="completed").length;
+      const key = "c:"+g.chapter.id;
+      const isOpen = ui.reviewExpanded===key;
+      return `<button onclick="toggleReviewExpanded('${key}')" style="width:100%;text-align:right;margin-bottom:8px">
+        <div class="card row">
+          <div><p style="margin:0;font-weight:700;font-size:13px">🚉 ${esc(g.chapter.name)}</p><p class="muted" style="margin:2px 0 0;font-size:11px">${g.subject.emoji} ${esc(g.subject.name)}</p></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="muted" style="font-size:11px">${done}/${g.items.length}</span><span class="muted-i">${isOpen?"▲":"▼"}</span></div>
+        </div></button>
+        ${isOpen?`<div class="grid" style="margin-bottom:10px">${sorted.map(x=>reviewRow(x,false)).join("")}</div>`:""}`;
+    }).join("");
+  }
+
+  return filterBar + summary +
+  (late.length>0?`<div class="section-title"><h2>⚠️ مراجعات متأخرة</h2></div><div class="grid">${late.map(x=>reviewRow(x,true)).join("")}</div>`:"") +
+  `<div class="section-title"><h2>🔥 مراجعات اليوم</h2></div>` +
+  (due.length===0?`<div class="card"><p class="muted" style="text-align:center;margin:6px 0">لا توجد مراجعات مستحقة اليوم 🎉</p></div>`:`<div class="grid">${due.map(x=>reviewRow(x,true)).join("")}</div>`) +
+  `<div class="section-title"><h2>📅 المراجعات القادمة</h2></div>` +
+  (upcoming.length===0?`<div class="card"><div class="empty"><div class="em">📅</div><div class="t">لا توجد مراجعات قادمة بعد</div></div></div>`:`<div class="grid">${upcoming.slice(0,15).map(x=>reviewRow(x,true)).join("")}</div>`);
+}
+
+/* ======================= TODOS ======================= */
+function todosView(){
+  const pending = sortedTodos().filter(t=>!t.done);
+  const done = sortedTodos().filter(t=>t.done);
+  const row = (t)=>`<div class="card row">
+    <button onclick="toggleTodo('${t.id}')" class="todo-check ${t.done?'done':''}">${t.done?"✔":""}</button>
+    <div style="flex:1;min-width:0">
+      <p style="margin:0;font-weight:700;font-size:13px;${t.done?'text-decoration:line-through;color:var(--muted-icon)':''}">${esc(t.text)}</p>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:4px">
+        <span style="display:flex;align-items:center;gap:4px;font-size:10px" class="muted"><i class="prio-dot" style="background:var(${PRIORITY[t.priority]?.v||'--yellow'})"></i>${PRIORITY[t.priority]?.label||""}</span>
+        ${t.dueDate?`<span class="muted-i" style="font-size:10px">📅 ${displayDate(t.dueDate)} · ${countdownLabel(t.dueDate)}</span>`:""}
+        ${t.addToCalendar?`<span class="muted-i" style="font-size:10px">🔗 في التقويم</span>`:""}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="openTodoFormModal('${t.id}')" style="color:var(--blue)">✏️</button>
+      <button onclick="deleteTodo('${t.id}')" style="color:var(--red)">🗑️</button>
+    </div>
+  </div>`;
+  return `
+  <div class="section-title"><h2>✅ مهامّي</h2><button class="btn sm" onclick="openTodoFormModal()">➕ مهمة جديدة</button></div>
+  ${pending.length===0 ? `<div class="card"><div class="empty"><div class="em">✅</div><div class="t">لا توجد مهام معلّقة</div><div class="s">أضيفي مهمة جديدة لتنظيم يومك 🗒️</div></div></div>` : `<div class="grid">${pending.map(row).join("")}</div>`}
+  ${done.length>0?`<div class="section-title"><h2>مكتملة (${done.length})</h2></div><div class="grid">${done.map(row).join("")}</div>`:""}
   `;
+}
+function todoDateFieldHtml(t){
+  let hy="", hm="", hd="";
+  if(t?.dueDate){ const d=new Date(t.dueDate+"T00:00:00"); const h=gToH(d.getFullYear(),d.getMonth()+1,d.getDate()); hy=h[0]; hm=h[1]; hd=h[2]; }
+  return `
+  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">نوع التاريخ</label>
+  <div class="row" style="gap:6px;margin-bottom:12px">
+    <button id="tdt-greg" class="choice on" onclick="setTodoDateType('greg')">ميلادي</button>
+    <button id="tdt-hijri" class="choice" onclick="setTodoDateType('hijri')">هجري</button>
+  </div>
+  <div id="todo-greg-field"><div class="field"><label>تاريخ الاستحقاق (اختياري)</label><input id="f-todo-date" type="date" value="${t?.dueDate||""}"></div></div>
+  <div id="todo-hijri-field" style="display:none">
+    <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">تاريخ الاستحقاق (هجري، اختياري)</label>
+    <div class="two-col" style="gap:6px;margin-bottom:11px">
+      <div class="field" style="margin-bottom:0"><input id="f-todo-hd" type="number" min="1" max="30" placeholder="اليوم" value="${hd}"></div>
+      <div class="field" style="margin-bottom:0"><select id="f-todo-hm">${HIJRI_MONTHS.map((m,i)=>`<option value="${i+1}" ${Number(hm)===i+1?"selected":""}>${m}</option>`).join("")}</select></div>
+      <div class="field" style="margin-bottom:0"><select id="f-todo-hy">${hijriYearOptions(hy)}</select></div>
+    </div>
+  </div>`;
+}
+function openTodoFormModal(editingId){
+  const t = editingId ? state.todos.find(x=>x.id===editingId) : null;
+  const body = `
+  <div class="field"><label>المهمة</label><input id="f-todo-text" value="${esc(t?.text||"")}" placeholder="مثال: مراجعة ملخص Chapter 3"></div>
+  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">الأولوية</label>
+  <div class="row" style="gap:6px;margin-bottom:12px">
+    <button id="prio-high" class="choice" onclick="selectPriority('high')">🔴 عالية</button>
+    <button id="prio-medium" class="choice" onclick="selectPriority('medium')">🟡 متوسطة</button>
+    <button id="prio-low" class="choice" onclick="selectPriority('low')">🟢 منخفضة</button>
+  </div>
+  ${todoDateFieldHtml(t)}
+  <label class="row" style="background:var(--track);border-radius:12px;padding:10px;font-size:12px;margin:14px 0"><span>📅 إضافة هذه المهمة إلى التقويم (إن حُدد تاريخ)</span><input type="checkbox" id="f-todo-cal" ${t?.addToCalendar?"checked":""}></label>
+  <button class="btn" style="width:100%;justify-content:center" onclick="saveTodoSubmit(${editingId?`'${editingId}'`:null})">💾 حفظ المهمة</button>
+  `;
+  openModal(modalWrap(editingId?"✏️ تعديل مهمة":"🗒️ مهمة جديدة", body));
+  selectPriority(t?.priority || "medium");
+  const initialType = (t?.dueDate && state.dateSystem==="hijri") || (!t && state.dateSystem==="hijri") ? "hijri" : "greg";
+  setTodoDateType(initialType);
 }
 
 /* ======================= PLAN ======================= */
@@ -863,7 +1287,6 @@ function planView(){
   allReviewsFlat().forEach(x=>{ if(x.status==="completed") return; const diff=daysBetween(todayStr(),x.review.date); if(diff>=0&&diff<=horizon){ (agenda[x.review.date]=agenda[x.review.date]||[]).push({type:"reminder",label:`${x.chapter.name} — ${x.subject.name}`}); } });
   tests.forEach(x=>{ const diff=daysBetween(todayStr(),x.test.date); if(diff>=0&&diff<=horizon){ (agenda[x.test.date]=agenda[x.test.date]||[]).push({type:"test",label:`${x.test.name} — ${x.subject.name}`}); } });
   const dates = Object.keys(agenda).sort();
-
   return `
   <div class="section-title"><h2>🏁 الاختبارات</h2><button class="btn sm" ${state.subjects.length===0?"disabled":""} onclick="openTestForm(null)">➕ اختبار</button></div>
   ${tests.length===0?`<div class="card"><div class="empty"><div class="em">🏁</div><div class="t">لا توجد اختبارات مضافة</div><div class="s">${state.subjects.length===0?"أضف مادة أولًا.":"اضغط «➕ اختبار» أعلاه."}</div></div></div>`:
@@ -878,11 +1301,9 @@ function planView(){
         <button onclick="deleteTest('${subject.id}','${test.id}')" style="color:var(--red)">🗑️</button>
       </div></div>`;
   }).join("")}</div>`}
-
   <div class="section-title"><h2>🧠 المخطط الذكي</h2></div>
   <div class="card"><p class="muted" style="font-size:12px;margin:0 0 10px">يوزّع المحطات المتبقية، ويضيف أيام مراجعة وأيام حل أسئلة وتثبيت قبل الاختبار.</p>
   <button class="btn" style="width:100%;justify-content:center" ${tests.length===0?"disabled":""} onclick="openSmartPlanModal()">✨ إنشاء خطة توزيع</button></div>
-
   <div class="section-title"><h2>📅 الأيام القادمة</h2></div>
   ${dates.length===0?`<div class="card"><div class="empty"><div class="em">📅</div><div class="t">لا توجد أحداث خلال الأسابيع القادمة</div></div></div>`:
   `<div class="grid">${dates.map(d=>`<div class="card"><p style="color:var(--primary);font-weight:800;font-size:12px;margin:0 0 6px">${displayDate(d)}</p>
@@ -961,26 +1382,36 @@ function renderSmartPlanBody(){
         ${dayMap[d].map(e=>`<p style="font-size:12px;margin:2px 0">${esc(e.label)}</p>`).join("")}</div>`).join("")}</div>`;
 }
 
-/* ======================= GPA (5.0 scale, cumulative + per-semester) ======================= */
+/* ======================= GPA ======================= */
 function gpaView(){
-  const cumulative = computeGpa(state.gpaCourses);
-  const totalHours = state.gpaCourses.reduce((s,c)=>s+(Number(c.hours)||0),0);
+  const cumulative = computeCumulativeGpa();
+  const prevHours = state.gpaPreviousTerms.reduce((s,t)=>s+(Number(t.hours)||0),0);
+  const newHours = state.gpaCourses.reduce((s,c)=>s+(Number(c.hours)||0),0);
+  const totalHours = prevHours + newHours;
   const bySem = {};
   state.gpaCourses.forEach(c=>{ const k=c.semester?.trim()||"بدون فصل"; (bySem[k]=bySem[k]||[]).push(c); });
   const semKeys = Object.keys(bySem);
-
   return `
-  <div class="card" style="background:var(--primary);color:#fff;text-align:center;padding:22px">
-    <p style="opacity:.7;font-size:11px;margin:0">🧮 المعدل التراكمي (من 5.0)</p>
+  <div class="card" style="background:var(--blue);color:#fff;text-align:center;padding:22px">
+    <p style="opacity:.8;font-size:11px;margin:0">🧮 المعدل التراكمي (من 5.0)</p>
     <p class="font-d" style="font-size:34px;font-weight:800;margin:4px 0">${cumulative.toFixed(2)}</p>
-    <p style="opacity:.7;font-size:11px;margin:0">${totalHours} ساعة معتمدة</p>
+    <p style="opacity:.8;font-size:11px;margin:0">${totalHours} ساعة معتمدة${prevHours?` (منها ${prevHours} من أترام سابقة)`:""}</p>
   </div>
-
+  <div class="section-title"><h2>🕰️ أترام سابقة</h2><button class="btn sm" onclick="addGpaPrevTerm()">➕ ترم سابق</button></div>
+  ${state.gpaPreviousTerms.length===0?`<div class="card"><p class="muted" style="font-size:11px;margin:0;text-align:center">إن كان لديك معدل تراكمي من أترام سابقة قبل استخدام الموقع، أضيفيها هنا ليُحسب معدلك التراكمي الكلي بدقة. يمكنك إضافة أكثر من ترم.</p></div>`:
+  `<div class="grid">${state.gpaPreviousTerms.map(t=>`
+    <div class="card">
+      <div class="field" style="margin-bottom:6px"><label>اسم الترم</label><input value="${esc(t.label||"")}" placeholder="مثال: الفصل الأول 2025" onchange="updateGpaPrevTerm('${t.id}','label',this.value)"></div>
+      <div class="two-col">
+        <div class="field" style="margin-bottom:6px"><label>المعدل (من 5.0)</label><input type="number" min="0" max="5" step="0.01" value="${t.gpa??""}" placeholder="مثال: 4.20" onchange="updateGpaPrevTerm('${t.id}','gpa',this.value)"></div>
+        <div class="field" style="margin-bottom:6px"><label>عدد الساعات</label><input type="number" min="0" value="${t.hours??""}" placeholder="مثال: 18" onchange="updateGpaPrevTerm('${t.id}','hours',this.value)"></div>
+      </div>
+      <button onclick="deleteGpaPrevTerm('${t.id}')" style="color:var(--red);font-size:12px">🗑️ حذف الترم</button>
+    </div>`).join("")}</div>`}
   ${semKeys.length>0?`<div class="section-title"><h2>📚 المعدل الفصلي (من 5.0)</h2></div>
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
-  ${semKeys.map(k=>{ const g=computeGpa(bySem[k]); return `<div class="card" style="text-align:center;padding:12px"><p class="muted" style="font-size:10px;margin:0 0 4px">${esc(k)}</p><p class="font-d" style="font-weight:800;font-size:18px;margin:0">${g.toFixed(2)}</p><p class="muted-i" style="font-size:9px;margin:2px 0 0">${bySem[k].length} مقررات</p></div>`; }).join("")}
+  ${semKeys.map(k=>{ const g=computeGpa(bySem[k]); return `<div class="card" style="text-align:center;padding:12px"><p class="muted" style="font-size:10px;margin:0 0 4px">${esc(k)}</p><p class="font-d" style="font-weight:800;font-size:18px;margin:0;color:var(--purple)">${g.toFixed(2)}</p><p class="muted-i" style="font-size:9px;margin:2px 0 0">${bySem[k].length} مقررات</p></div>`; }).join("")}
   </div>`:""}
-
   <div class="section-title"><h2>📋 المقررات</h2><button class="btn sm" onclick="addGpaCourse()">➕ مقرر</button></div>
   ${state.gpaCourses.length===0?`<div class="card"><div class="empty"><div class="em">🧮</div><div class="t">لا توجد مقررات بعد</div><div class="s">اضغط «➕ مقرر» لإضافة أول مقرر.</div></div></div>`:
   `<div class="grid">${state.gpaCourses.map(c=>`
@@ -1007,10 +1438,10 @@ function statsView(){
   const completedR = reviews.filter(x=>x.status==="completed").length, upcomingR = reviews.filter(x=>x.status==="upcoming"||x.status==="due").length, lateR = reviews.filter(x=>x.status==="late").length;
   const hours = Math.round(chapters.filter(x=>x.status==="completed").reduce((s,x)=>s+(x.chapter.estMinutes||90),0)/60*10)/10;
   return `
-  <div class="card" style="background:var(--primary);color:#fff;text-align:center;padding:22px">
-    <p style="opacity:.7;font-size:11px;margin:0">${pct===100?"🏆 اكتمل كل شيء!":"🔥 التقدم العام"}</p>
+  <div class="card" style="background:var(--purple);color:#fff;text-align:center;padding:22px">
+    <p style="opacity:.8;font-size:11px;margin:0">${pct===100?"🏆 اكتمل كل شيء!":"🔥 التقدم العام"}</p>
     <p class="font-d" style="font-size:34px;font-weight:800;margin:4px 0">${pct}%</p>
-    <p style="opacity:.7;font-size:11px;margin:0">${done} / ${total} محطة · ${hours} ساعة مذاكرة</p>
+    <p style="opacity:.8;font-size:11px;margin:0">${done} / ${total} محطة · ${hours} ساعة مذاكرة</p>
   </div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
     <div class="card" style="text-align:center;padding:12px"><p class="font-d" style="font-weight:800;color:var(--green);margin:0;font-size:18px">${completedR}</p><p class="muted" style="font-size:10px;margin:4px 0 0">مكتملة ✅</p></div>
@@ -1032,13 +1463,15 @@ function openAddSubjectModal(){
   const body = `
   <div class="field"><label>اسم المادة</label><input id="f-subj-name" placeholder="مثال: Pharmacology"></div>
   <div class="two-col">
-    <div class="field"><label>الإيموجي المختار</label><input id="f-subj-emoji" value="📘" maxlength="4" style="text-align:center;font-size:17px"></div>
+    <div class="field"><label>الإيموجي</label><input id="f-subj-emoji" value="📘" maxlength="4" style="text-align:center;font-size:20px"></div>
     <div class="field"><label>اللون الشخصي 🎨</label><input id="f-subj-color" type="color" value="${COLOR_PRESETS[0]}"></div>
   </div>
-  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">اختر إيموجي 😀</label>
-  <div class="emoji-grid">${EMOJI_LIST.map(e=>`<button onclick="pickEmoji('f-subj-emoji','${e}')">${e}</button>`).join("")}</div>
-  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px">
     ${COLOR_PRESETS.map(c=>`<button class="swatch" style="background:${c}" onclick="document.getElementById('f-subj-color').value='${c}'"></button>`).join("")}
+  </div>
+  <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">نوع المادة</label>
+  <div class="row" style="gap:6px;margin-bottom:14px">
+    ${SUBJECT_KINDS.map(([k,l])=>`<button id="kind-${k}" class="choice${k==="نظري"?" on":""}" onclick="selectKind('${k}')">${l}</button>`).join("")}
   </div>
   <div class="field"><label>عدد الساعات المعتمدة (اختياري)</label><input id="f-subj-hours" type="number" min="0" placeholder="مثال: 3"></div>
   <p class="muted" style="font-size:11px;margin:6px 0">🚉 أول محطة (Chapter)</p>
@@ -1050,6 +1483,7 @@ function openAddSubjectModal(){
   <button class="btn" style="width:100%;justify-content:center" onclick="submitAddSubject()">🚀 إضافة المادة</button>
   `;
   openModal(modalWrap("🎯 مادة جديدة", body));
+  window.__subjKind = "نظري";
 }
 function openDeleteSubjectModal(subjectId){
   const s = state.subjects.find(x=>x.id===subjectId);
@@ -1084,7 +1518,6 @@ function openEditChapterModal(subjectId, chapterId){
 
 /* ======================= SETTINGS ======================= */
 function openSettingsModal(){
-  const legendKeys = ["occasion","holiday","test","lecture","task","reminder","other"];
   const body = `
   <div class="row" style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
     <span style="font-size:13px;font-weight:700">🌙 الوضع الليلي</span>
@@ -1095,15 +1528,17 @@ function openSettingsModal(){
     <div class="seg"><button class="${state.timeFormat==='24'?'on':''}" onclick="setTimeFormat('24');openSettingsModal()">24 ساعة</button><button class="${state.timeFormat==='12'?'on':''}" onclick="setTimeFormat('12');openSettingsModal()">12 ساعة</button></div>
   </div>
   <div style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
+    <p style="font-size:13px;font-weight:700;margin:0 0 8px">🔤 الخط</p>
+    <div class="seg">
+      <button class="${state.fontFamily==='Tajawal'?'on':''}" onclick="setFontFamily('Tajawal');openSettingsModal()" style="font-family:'Tajawal',sans-serif">Tajawal</button>
+      <button class="${state.fontFamily==='Cairo'?'on':''}" onclick="setFontFamily('Cairo');openSettingsModal()" style="font-family:'Cairo',sans-serif">Cairo</button>
+      <button class="${state.fontFamily==='IBM Plex Sans Arabic'?'on':''}" onclick="setFontFamily('IBM Plex Sans Arabic');openSettingsModal()" style="font-family:'IBM Plex Sans Arabic',sans-serif">IBM Plex</button>
+    </div>
+  </div>
+  <div style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
     <p style="font-size:13px;font-weight:700;margin:0 0 8px">📆 نظام التاريخ</p>
     <div class="seg"><button class="${state.dateSystem==='gregorian'?'on':''}" onclick="setDateSystem('gregorian');openSettingsModal()">ميلادي</button><button class="${state.dateSystem==='hijri'?'on':''}" onclick="setDateSystem('hijri');openSettingsModal()">هجري</button></div>
     <p class="muted-i" style="font-size:10px;margin:8px 0 0">التاريخ الهجري تقريبي وقد يختلف بيوم عن تقويم أم القرى الرسمي.</p>
-  </div>
-  <div style="background:var(--track);border-radius:14px;padding:12px;margin-bottom:12px">
-    <p style="font-size:13px;font-weight:700;margin:0 0 8px">🎨 دليل الألوان</p>
-    <div style="display:flex;flex-direction:column;gap:6px">
-    ${legendKeys.map(k=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:10px;height:10px;border-radius:50%;background:var(${EVENT_COLORS[k].v})"></span>${EVENT_COLORS[k].label}</div>`).join("")}
-    </div>
   </div>
   <p class="muted" style="font-size:11px;margin-bottom:10px">جميع بياناتك محفوظة تلقائيًا على هذا الجهاز والمتصفح.</p>
   <button class="btn danger" style="width:100%;justify-content:center" onclick="openResetConfirm()">🗑️ إعادة تعيين جميع البيانات</button>
