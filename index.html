@@ -617,7 +617,7 @@ input,textarea,select{font-family:inherit;}
 
 <div class="modal-overlay" id="modalAddSession">
   <div class="modal">
-    <h3>إضافة محاضرة</h3>
+    <h3 id="sessionModalTitle">إضافة محاضرة</h3>
     <div class="field"><label>المادة</label><select id="sesSubject"></select></div>
     <div class="field"><label>نوع الحصة</label>
       <select id="sesType"><option value="نظري">📖 نظري</option><option value="عملي">🧪 عملي</option></select>
@@ -629,11 +629,12 @@ input,textarea,select{font-family:inherit;}
       <div class="field"><label>من الساعة</label><input id="sesStart" type="time" value="08:00"></div>
       <div class="field"><label>إلى الساعة</label><input id="sesEnd" type="time" value="09:00"></div>
     </div>
-    <div class="field"><label>ملاحظة (القاعة / الأستاذ)</label><input id="sesNote"></div>
+    <div class="field"><label>ملاحظة خاصة بهذه المحاضرة (القاعة / الأستاذ)</label><input id="sesNote"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-close="modalAddSession">إلغاء</button>
       <button class="btn btn-primary" id="saveSessionBtn">حفظ</button>
     </div>
+    <button class="btn btn-ghost" id="deleteSessionBtn" style="width:100%;margin-top:8px;display:none;color:var(--red);">🗑 حذف هذه المحاضرة</button>
   </div>
 </div>
 
@@ -664,10 +665,9 @@ input,textarea,select{font-family:inherit;}
     <div class="field"><label>المادة</label><select id="examSubject"></select></div>
     <div class="field"><label>الفصول (Chapters) الداخلة في الاختبار</label>
       <div class="row2">
-        <select id="examFromChapter"></select>
-        <select id="examToChapter"></select>
+        <div><label style="font-size:11px;color:var(--gray);margin-bottom:4px;display:block;">من</label><select id="examFromChapter"></select></div>
+        <div><label style="font-size:11px;color:var(--gray);margin-bottom:4px;display:block;">إلى</label><select id="examToChapter"></select></div>
       </div>
-      <div style="font-size:11px;color:var(--gray);margin-top:4px;display:flex;justify-content:space-between;"><span>إلى</span><span>من</span></div>
     </div>
     <div class="field"><label>نوع التاريخ</label>
       <div class="toggle-type" id="examDateType" style="border:1px solid var(--line);border-radius:9px;overflow:hidden;">
@@ -1392,31 +1392,69 @@ function renderTimetable(){
       cell.appendChild(div);
     }
   });
-  grid.querySelectorAll('.tt-session').forEach(s=> s.addEventListener('click', ()=>{
-    if(confirm('حذف هذه الحصة؟')){ state.timetable = state.timetable.filter(t=>t.id!==s.dataset.del); saveState(); renderTimetable(); }
-  }));
+  grid.querySelectorAll('.tt-session').forEach(s=> s.addEventListener('click', ()=> openEditSession(s.dataset.del)));
   grid.querySelectorAll('.tt-cell').forEach(c=> c.addEventListener('click', (e)=>{
     if(e.target!==c) return;
+    editingSessionId = null;
+    document.getElementById('sessionModalTitle').textContent = 'إضافة محاضرة';
+    document.getElementById('saveSessionBtn').textContent = 'حفظ';
+    document.getElementById('deleteSessionBtn').style.display = 'none';
     populateSubjectSelect('sesSubject');
+    document.getElementById('sesNote').value = '';
     document.getElementById('sesDay').value = c.dataset.day;
     document.getElementById('sesStart').value = String(c.dataset.hour).padStart(2,'0')+':00';
     document.getElementById('sesEnd').value = String(+c.dataset.hour+1).padStart(2,'0')+':00';
     openModal('modalAddSession');
   }));
 }
+let editingSessionId = null;
+function openEditSession(id){
+  const sess = state.timetable.find(t=>t.id===id);
+  if(!sess) return;
+  editingSessionId = id;
+  document.getElementById('sessionModalTitle').textContent = 'تعديل المحاضرة';
+  document.getElementById('saveSessionBtn').textContent = 'حفظ التعديلات';
+  document.getElementById('deleteSessionBtn').style.display = 'block';
+  populateSubjectSelect('sesSubject');
+  document.getElementById('sesSubject').value = sess.subjectId;
+  document.getElementById('sesType').value = sess.type;
+  document.getElementById('sesDay').value = sess.day;
+  document.getElementById('sesStart').value = sess.start;
+  document.getElementById('sesEnd').value = sess.end;
+  document.getElementById('sesNote').value = sess.note || '';
+  openModal('modalAddSession');
+}
+document.getElementById('deleteSessionBtn').addEventListener('click', ()=>{
+  if(!editingSessionId) return;
+  if(confirm('حذف هذه المحاضرة؟')){
+    state.timetable = state.timetable.filter(t=>t.id!==editingSessionId);
+    saveState(); closeModal('modalAddSession'); renderTimetable();
+  }
+});
 document.getElementById('openAddSession').addEventListener('click', ()=>{
+  editingSessionId = null;
+  document.getElementById('sessionModalTitle').textContent = 'إضافة محاضرة';
+  document.getElementById('saveSessionBtn').textContent = 'حفظ';
+  document.getElementById('deleteSessionBtn').style.display = 'none';
+  document.getElementById('sesNote').value = '';
   populateSubjectSelect('sesSubject');
   openModal('modalAddSession');
 });
 document.getElementById('saveSessionBtn').addEventListener('click', ()=>{
   const subjectId = document.getElementById('sesSubject').value;
   if(!subjectId){ alert('أضف مادة أولاً'); return; }
-  state.timetable.push({
-    id:uid(), subjectId, type:document.getElementById('sesType').value,
+  const sessData = {
+    subjectId, type:document.getElementById('sesType').value,
     day:+document.getElementById('sesDay').value,
     start:document.getElementById('sesStart').value, end:document.getElementById('sesEnd').value,
     note:document.getElementById('sesNote').value.trim()
-  });
+  };
+  if(editingSessionId){
+    const idx = state.timetable.findIndex(t=>t.id===editingSessionId);
+    if(idx>-1) state.timetable[idx] = {id:editingSessionId, ...sessData};
+  } else {
+    state.timetable.push({id:uid(), ...sessData});
+  }
   saveState(); closeModal('modalAddSession'); renderTimetable();
 });
 
@@ -1872,8 +1910,16 @@ function renderSmartPlanDays(){
       i++;
     });
   });
-  el.innerHTML = renderScheduleCards(schedule) + `<button class="btn btn-primary" id="applySmartPlanBtn" style="width:100%;margin-top:6px;">✅ اعتماد الخطة وإضافتها إلى المهام</button>`;
-  document.getElementById('applySmartPlanBtn').addEventListener('click', ()=>{
+  el.innerHTML = renderScheduleCards(schedule) + `
+    <button class="btn btn-primary" id="adoptSmartPlanBtn" style="width:100%;margin-top:6px;">✅ اعتماد الخطة</button>
+    <button class="btn btn-ghost" id="addTasksSmartPlanBtn" style="width:100%;margin-top:8px;">➕ إضافة المهام إلى قائمة المهام</button>`;
+  document.getElementById('adoptSmartPlanBtn').addEventListener('click', ()=>{
+    ex.adoptedPlan = {schedule, adoptedAt:{y:today.getFullYear(),m:today.getMonth()+1,d:today.getDate()}};
+    saveState();
+    renderAll();
+    alert('تم اعتماد الخطة ✅ — يمكنك إضافتها إلى المهام الآن أو لاحقًا من بطاقة الاختبار.');
+  });
+  document.getElementById('addTasksSmartPlanBtn').addEventListener('click', ()=>{
     schedule.forEach((items,idx)=>{
       const d = new Date(today); d.setDate(d.getDate()+idx);
       items.forEach(it=>{
@@ -1884,7 +1930,6 @@ function renderSmartPlanDays(){
         });
       });
     });
-    ex.adoptedPlan = {schedule, adoptedAt:{y:today.getFullYear(),m:today.getMonth()+1,d:today.getDate()}};
     saveState();
     closeModal('modalSmartPlan');
     renderAll();
@@ -1892,7 +1937,23 @@ function renderSmartPlanDays(){
 }
 function openSavedPlanView(ex){
   document.getElementById('dayEventsTitle').textContent = `الخطة المعتمدة — ${ex.examTitle} ✅`;
-  document.getElementById('dayEventsList').innerHTML = renderScheduleCards(ex.adoptedPlan.schedule) || '<div style="font-size:12px;color:var(--gray);">لا توجد بيانات محفوظة لهذه الخطة</div>';
+  document.getElementById('dayEventsList').innerHTML = (renderScheduleCards(ex.adoptedPlan.schedule) || '<div style="font-size:12px;color:var(--gray);">لا توجد بيانات محفوظة لهذه الخطة</div>')
+    + `<button class="btn btn-ghost" id="addTasksFromSavedPlanBtn" style="width:100%;margin-top:10px;">➕ إضافة المهام إلى قائمة المهام</button>`;
+  document.getElementById('addTasksFromSavedPlanBtn').addEventListener('click', ()=>{
+    ex.adoptedPlan.schedule.forEach((items,idx)=>{
+      const d = new Date(today); d.setDate(d.getDate()+idx);
+      items.forEach(it=>{
+        state.todos.push({
+          text:`${it.icon} ${it.text}`, priority:'medium', done:false,
+          dueDate:{y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()},
+          toCalendar:false, subjectId:ex.subjectId, examId:ex.id
+        });
+      });
+    });
+    saveState();
+    closeModal('modalDayEvents');
+    renderAll();
+  });
   openModal('modalDayEvents');
 }
 
