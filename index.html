@@ -434,7 +434,7 @@ input,textarea,select{font-family:inherit;}
 
 <div class="modal-overlay" id="modalAddSubject">
   <div class="modal">
-    <h3>مادة جديدة 🎯</h3>
+    <h3 id="subjectModalTitle">مادة جديدة 🎯</h3>
     <div class="field"><label>اسم المادة</label><input id="subName" placeholder="مثال: Pharmacology"></div>
     <div class="row2">
       <div class="field"><label>الإيموجي</label><input id="subEmoji" placeholder="📘" maxlength="4" style="text-align:center;font-size:18px;"></div>
@@ -451,11 +451,13 @@ input,textarea,select{font-family:inherit;}
     </div>
     <div class="field"><label>عدد الساعات المعتمدة (اختياري)</label><input id="subHours" type="number" min="0" placeholder="مثال: 3"></div>
     <div class="field"><label>اسم الدكتور (اختياري)</label><input id="subInstructor" placeholder="مثال: د. أحمد"></div>
-    <h4 style="font-size:13px;margin:16px 0 8px;">أول محطة (Chapter) 🖥</h4>
-    <div class="field"><label>اسم المحطة</label><input id="subFirstStation" value="Chapter 1"></div>
-    <div class="row2">
-      <div class="field"><label>المدة المتوقعة (دقيقة)</label><input id="subFirstMinutes" type="number" min="0" placeholder="مثلا 90"></div>
-      <div class="field"><label>عدد الصفحات</label><input id="subFirstPages" type="number" min="0"></div>
+    <div id="subFirstStationSection">
+      <h4 style="font-size:13px;margin:16px 0 8px;">أول محطة (Chapter) 🖥</h4>
+      <div class="field"><label>اسم المحطة</label><input id="subFirstStation" value="Chapter 1"></div>
+      <div class="row2">
+        <div class="field"><label>المدة المتوقعة (دقيقة)</label><input id="subFirstMinutes" type="number" min="0" placeholder="مثلا 90"></div>
+        <div class="field"><label>عدد الصفحات</label><input id="subFirstPages" type="number" min="0"></div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-close="modalAddSubject">إلغاء</button>
@@ -861,7 +863,12 @@ document.querySelectorAll('#subTypeToggle button').forEach(b=>{
   });
 });
 
+let editingSubjectIdx = null;
 document.getElementById('openAddSubject').addEventListener('click', ()=>{
+  editingSubjectIdx = null;
+  document.getElementById('subjectModalTitle').textContent = 'مادة جديدة 🎯';
+  document.getElementById('saveSubjectBtn').textContent = 'إضافة المادة 🚀';
+  document.getElementById('subFirstStationSection').style.display = 'block';
   document.getElementById('subName').value=''; document.getElementById('subEmoji').value='📘';
   document.getElementById('subHours').value='';
   document.getElementById('subInstructor').value='';
@@ -875,10 +882,41 @@ document.getElementById('openAddSubject').addEventListener('click', ()=>{
   renderColorPicker('subColorPicker', subjectPalette[0]);
   openModal('modalAddSubject');
 });
+function openEditSubject(idx){
+  const s = state.subjects[idx];
+  editingSubjectIdx = idx;
+  document.getElementById('subjectModalTitle').textContent = 'تعديل المادة ✏️';
+  document.getElementById('saveSubjectBtn').textContent = 'حفظ التعديلات 💾';
+  document.getElementById('subFirstStationSection').style.display = 'none';
+  document.getElementById('subName').value = s.name;
+  document.getElementById('subEmoji').value = s.emoji;
+  document.getElementById('subHours').value = s.hours || '';
+  document.getElementById('subInstructor').value = s.instructor || '';
+  subjectType = s.type || 'نظري';
+  document.querySelectorAll('#subTypeToggle button').forEach(x=>{
+    x.classList.toggle('on', x.dataset.v===subjectType);
+    x.style.border = x.dataset.v===subjectType ? '1.5px solid var(--green-deep)' : '1px solid var(--line)';
+  });
+  renderColorPicker('subColorPicker', s.color);
+  document.getElementById('subColorFree').value = s.color;
+  openModal('modalAddSubject');
+}
 document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
   const name=document.getElementById('subName').value.trim();
   if(!name){ alert('الرجاء إدخال اسم المادة'); return; }
   const color = document.getElementById('subColorFree').value || subjectPalette[0];
+  if(editingSubjectIdx!==null){
+    const s = state.subjects[editingSubjectIdx];
+    s.name = name;
+    s.emoji = document.getElementById('subEmoji').value.trim()||'📘';
+    s.color = color;
+    s.type = subjectType;
+    s.hours = +document.getElementById('subHours').value || null;
+    s.instructor = document.getElementById('subInstructor').value.trim() || null;
+    saveState();
+    closeModal('modalAddSubject'); renderAll();
+    return;
+  }
   const firstStName = document.getElementById('subFirstStation').value.trim() || 'Chapter 1';
   const subject = {
     id: uid(), name, emoji: document.getElementById('subEmoji').value.trim()||'📘',
@@ -906,18 +944,19 @@ function renderSubjectsGrid(){
     el.innerHTML = `<div class="card empty-state"><div class="ic">📚</div><p style="font-weight:800;color:var(--ink);">لا توجد مواد بعد</p><p>أضف أول مادة وابدأ رحلتك بين المحطات! 🚉✨</p></div>`;
     return;
   }
-  el.innerHTML = `<div class="subjects-grid">${state.subjects.map(s=>{
+  el.innerHTML = `<div class="subjects-grid">${state.subjects.map((s,i)=>{
     const p = subjectProgress(s);
     return `<div class="subject-card" style="background:${s.color}" data-open="${s.id}">
-      <button class="del-x" data-del="${s.id}">×</button>
+      <button class="del-x" data-del="${s.id}" style="left:10px;">×</button>
+      <button class="del-x" data-editsub="${i}" style="left:38px;">✏️</button>
       <div class="top"><span class="emoji">${s.emoji}</span> ${s.name}</div>
-      <div class="type">${s.type||''}${s.hours?' • '+s.hours+' ساعة':''}</div>
+      <div class="type">${s.type||''}${s.hours?' • '+s.hours+' ساعة':''}${s.instructor?' • 👨‍🏫 '+s.instructor:''}</div>
       <div class="bar"><i style="width:${p.pct}%"></i></div>
       <div class="pct">${p.done}/${p.total} محطة — ${p.pct}%</div>
     </div>`;
   }).join('')}</div>`;
   el.querySelectorAll('[data-open]').forEach(c=> c.addEventListener('click', (e)=>{
-    if(e.target.closest('[data-del]')) return;
+    if(e.target.closest('[data-del]') || e.target.closest('[data-editsub]')) return;
     openSubjectDetail(c.dataset.open);
   }));
   el.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', (e)=>{
@@ -925,6 +964,10 @@ function renderSubjectsGrid(){
     if(confirm('حذف هذه المادة وكل محطاتها؟')){
       state.subjects = state.subjects.filter(s=>s.id!==b.dataset.del); saveState(); renderAll();
     }
+  }));
+  el.querySelectorAll('[data-editsub]').forEach(b=> b.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openEditSubject(+b.dataset.editsub);
   }));
 }
 
@@ -934,13 +977,17 @@ function renderSubjectDetail(){
   if(!subject){ switchView('subjects'); return; }
   const p = subjectProgress(subject);
   document.getElementById('subjectHeader').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span style="font-size:26px;">${subject.emoji}</span>
-      <div><div style="font-weight:800;font-size:16px;">${subject.name}</div>
-      <div style="font-size:12px;color:var(--gray);">${subject.type||''}${subject.hours?' • '+subject.hours+' ساعة':''}${subject.instructor?' • 👨‍🏫 '+subject.instructor:''}</div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:26px;">${subject.emoji}</span>
+        <div><div style="font-weight:800;font-size:16px;">${subject.name}</div>
+        <div style="font-size:12px;color:var(--gray);">${subject.type||''}${subject.hours?' • '+subject.hours+' ساعة':''}${subject.instructor?' • 👨‍🏫 '+subject.instructor:''}</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="editThisSubjectBtn">✏️</button>
     </div>
     <div class="bar" style="background:var(--paper);height:7px;border-radius:6px;margin-top:12px;overflow:hidden;"><i style="display:block;height:100%;width:${p.pct}%;background:${subject.color};border-radius:6px;"></i></div>
     <div style="font-size:12px;color:var(--gray);margin-top:6px;">${p.done} من ${p.total} محطة مكتملة (${p.pct}%)</div>`;
+  document.getElementById('editThisSubjectBtn').addEventListener('click', ()=> openEditSubject(state.subjects.indexOf(subject)));
 
   const statusBadge = {done:'<span class="week-badge" style="background:var(--green-deep);">✅ مكتملة</span>',
     current:'<span class="week-badge" style="background:var(--gold);">⭐ الحالية</span>',
