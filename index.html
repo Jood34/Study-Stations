@@ -451,6 +451,17 @@ input,textarea,select{font-family:inherit;}
     </div>
     <div class="field"><label>عدد الساعات المعتمدة (اختياري)</label><input id="subHours" type="number" min="0" placeholder="مثال: 3"></div>
     <div class="field"><label>اسم الدكتور (اختياري)</label><input id="subInstructor" placeholder="مثال: د. أحمد"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);background:var(--paper);border-radius:9px;padding:10px 12px;margin-bottom:14px;">
+      <input type="checkbox" id="subRemote"> 💻 المادة عن بُعد
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
+      <input type="checkbox" id="subHasPeriod"> 🗓 لها فترة محددة
+    </label>
+    <div class="row2" id="subPeriodFields" style="display:none;margin-bottom:14px;">
+      <div class="field" style="margin-bottom:0;"><label>من تاريخ</label><input id="subPeriodStart" type="date"></div>
+      <div class="field" style="margin-bottom:0;"><label>إلى تاريخ</label><input id="subPeriodEnd" type="date"></div>
+    </div>
+    <div class="field"><label>جدول المذاكرة (اختياري)</label><input id="subStudySchedule" placeholder="مثال: الأحد والثلاثاء 8-10م"></div>
     <div id="subFirstStationSection">
       <h4 style="font-size:13px;margin:16px 0 8px;">أول محطة (Chapter) 🖥</h4>
       <div class="field"><label>اسم المحطة</label><input id="subFirstStation" value="Chapter 1"></div>
@@ -864,6 +875,9 @@ document.querySelectorAll('#subTypeToggle button').forEach(b=>{
 });
 
 let editingSubjectIdx = null;
+document.getElementById('subHasPeriod').addEventListener('change', e=>{
+  document.getElementById('subPeriodFields').style.display = e.target.checked ? 'grid' : 'none';
+});
 document.getElementById('openAddSubject').addEventListener('click', ()=>{
   editingSubjectIdx = null;
   document.getElementById('subjectModalTitle').textContent = 'مادة جديدة 🎯';
@@ -872,6 +886,12 @@ document.getElementById('openAddSubject').addEventListener('click', ()=>{
   document.getElementById('subName').value=''; document.getElementById('subEmoji').value='📘';
   document.getElementById('subHours').value='';
   document.getElementById('subInstructor').value='';
+  document.getElementById('subRemote').checked = false;
+  document.getElementById('subHasPeriod').checked = false;
+  document.getElementById('subPeriodFields').style.display = 'none';
+  document.getElementById('subPeriodStart').value = '';
+  document.getElementById('subPeriodEnd').value = '';
+  document.getElementById('subStudySchedule').value = '';
   document.getElementById('subFirstStation').value='Chapter 1'; document.getElementById('subFirstPages').value='';
   document.getElementById('subFirstMinutes').value='';
   subjectType='نظري';
@@ -892,6 +912,12 @@ function openEditSubject(idx){
   document.getElementById('subEmoji').value = s.emoji;
   document.getElementById('subHours').value = s.hours || '';
   document.getElementById('subInstructor').value = s.instructor || '';
+  document.getElementById('subRemote').checked = !!s.isRemote;
+  document.getElementById('subHasPeriod').checked = !!s.period;
+  document.getElementById('subPeriodFields').style.display = s.period ? 'grid' : 'none';
+  document.getElementById('subPeriodStart').value = s.period ? `${s.period.start.y}-${String(s.period.start.m).padStart(2,'0')}-${String(s.period.start.d).padStart(2,'0')}` : '';
+  document.getElementById('subPeriodEnd').value = s.period ? `${s.period.end.y}-${String(s.period.end.m).padStart(2,'0')}-${String(s.period.end.d).padStart(2,'0')}` : '';
+  document.getElementById('subStudySchedule').value = s.studySchedule || '';
   subjectType = s.type || 'نظري';
   document.querySelectorAll('#subTypeToggle button').forEach(x=>{
     x.classList.toggle('on', x.dataset.v===subjectType);
@@ -900,6 +926,13 @@ function openEditSubject(idx){
   renderColorPicker('subColorPicker', s.color);
   document.getElementById('subColorFree').value = s.color;
   openModal('modalAddSubject');
+}
+function readPeriodFromForm(){
+  if(!document.getElementById('subHasPeriod').checked) return null;
+  const sv = document.getElementById('subPeriodStart').value, ev = document.getElementById('subPeriodEnd').value;
+  if(!sv || !ev) return null;
+  const [sy,sm,sd] = sv.split('-').map(Number), [ey,em,ed] = ev.split('-').map(Number);
+  return {start:{y:sy,m:sm,d:sd}, end:{y:ey,m:em,d:ed}};
 }
 document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
   const name=document.getElementById('subName').value.trim();
@@ -913,6 +946,9 @@ document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
     s.type = subjectType;
     s.hours = +document.getElementById('subHours').value || null;
     s.instructor = document.getElementById('subInstructor').value.trim() || null;
+    s.isRemote = document.getElementById('subRemote').checked;
+    s.period = readPeriodFromForm();
+    s.studySchedule = document.getElementById('subStudySchedule').value.trim() || null;
     saveState();
     closeModal('modalAddSubject'); renderAll();
     return;
@@ -923,6 +959,9 @@ document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
     color, type: subjectType,
     hours: +document.getElementById('subHours').value || null,
     instructor: document.getElementById('subInstructor').value.trim() || null,
+    isRemote: document.getElementById('subRemote').checked,
+    period: readPeriodFromForm(),
+    studySchedule: document.getElementById('subStudySchedule').value.trim() || null,
     stations: [{
       id: uid(), name: firstStName,
       pages: +document.getElementById('subFirstPages').value || 0,
@@ -949,7 +988,7 @@ function renderSubjectsGrid(){
     return `<div class="subject-card" style="background:${s.color}" data-open="${s.id}">
       <button class="del-x" data-del="${s.id}" style="left:10px;">×</button>
       <button class="del-x" data-editsub="${i}" style="left:38px;">✏️</button>
-      <div class="top"><span class="emoji">${s.emoji}</span> ${s.name}</div>
+      <div class="top"><span class="emoji">${s.emoji}</span> ${s.name}${s.isRemote?' 💻':''}</div>
       <div class="type">${s.type||''}${s.hours?' • '+s.hours+' ساعة':''}${s.instructor?' • 👨‍🏫 '+s.instructor:''}</div>
       <div class="bar"><i style="width:${p.pct}%"></i></div>
       <div class="pct">${p.done}/${p.total} محطة — ${p.pct}%</div>
@@ -976,12 +1015,15 @@ function renderSubjectDetail(){
   const subject = state.subjects.find(s=>s.id===currentSubjectId);
   if(!subject){ switchView('subjects'); return; }
   const p = subjectProgress(subject);
+  const periodStr = subject.period ? `${fmtDateAny(subject.period.start.y,subject.period.start.m,subject.period.start.d)} ← ${fmtDateAny(subject.period.end.y,subject.period.end.m,subject.period.end.d)}` : '';
   document.getElementById('subjectHeader').innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:26px;">${subject.emoji}</span>
-        <div><div style="font-weight:800;font-size:16px;">${subject.name}</div>
-        <div style="font-size:12px;color:var(--gray);">${subject.type||''}${subject.hours?' • '+subject.hours+' ساعة':''}${subject.instructor?' • 👨‍🏫 '+subject.instructor:''}</div></div>
+        <div><div style="font-weight:800;font-size:16px;">${subject.name}${subject.isRemote?' <span style="font-size:11px;background:var(--blue);color:#fff;border-radius:20px;padding:2px 8px;">💻 عن بُعد</span>':''}</div>
+        <div style="font-size:12px;color:var(--gray);">${subject.type||''}${subject.hours?' • '+subject.hours+' ساعة':''}${subject.instructor?' • 👨‍🏫 '+subject.instructor:''}</div>
+        ${periodStr?`<div style="font-size:11.5px;color:var(--gray);margin-top:2px;">🗓 ${periodStr}</div>`:''}
+        ${subject.studySchedule?`<div style="font-size:11.5px;color:var(--gray);margin-top:2px;">📚 ${subject.studySchedule}</div>`:''}</div>
       </div>
       <button class="btn btn-ghost btn-sm" id="editThisSubjectBtn">✏️</button>
     </div>
