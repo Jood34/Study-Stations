@@ -276,9 +276,18 @@ input,textarea,select{font-family:inherit;}
 
   <!-- TIMETABLE -->
   <section class="view" data-view="timetable">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <h3 class="section-title" style="margin:0;">📘 الجدول الدراسي</h3>
-      <button class="btn btn-primary btn-sm" id="openAddSession">+ إضافة محاضرة</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <h3 class="section-title" style="margin:0;" id="ttSectionTitle">📘 الجدول الدراسي</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="ttViewLectures">📘 المحاضرات</button>
+        <button class="btn btn-ghost btn-sm" id="ttViewStudy">📚 جدول المذاكرة</button>
+        <button class="btn btn-primary btn-sm" id="openAddSession">+ إضافة محاضرة</button>
+      </div>
+    </div>
+    <div id="ttStudyControls" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <select id="ttWeekSelect" style="font-size:12.5px;"></select>
+      <button class="btn btn-primary btn-sm" id="openAddStudyBlock">+ إضافة وقت مذاكرة</button>
+      <button class="btn btn-ghost btn-sm" id="repeatPrevWeekBtn">🔁 تكرار أسبوع سابق</button>
     </div>
     <div class="tt-wrap"><div class="tt-grid" id="ttGrid"></div></div>
   </section>
@@ -457,11 +466,26 @@ input,textarea,select{font-family:inherit;}
     <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">
       <input type="checkbox" id="subHasPeriod"> 🗓 لها فترة محددة
     </label>
-    <div class="row2" id="subPeriodFields" style="display:none;margin-bottom:14px;">
-      <div class="field" style="margin-bottom:0;"><label>من تاريخ</label><input id="subPeriodStart" type="date"></div>
-      <div class="field" style="margin-bottom:0;"><label>إلى تاريخ</label><input id="subPeriodEnd" type="date"></div>
+    <div id="subPeriodFields" style="display:none;margin-bottom:14px;">
+      <div class="toggle-type" id="subPeriodDateType" style="border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:10px;">
+        <button type="button" data-t="hijri" style="flex:1;padding:8px;border:none;background:var(--paper);color:var(--ink-soft);font-size:12.5px;font-weight:700;">هجري</button>
+        <button type="button" data-t="gregorian" class="on" style="flex:1;padding:8px;border:none;background:var(--green-deep);color:#fff;font-size:12.5px;font-weight:700;">ميلادي</button>
+      </div>
+      <div class="row2" id="subPeriodGregFields">
+        <div class="field" style="margin-bottom:0;"><label>من تاريخ</label><input id="subPeriodStart" type="date"></div>
+        <div class="field" style="margin-bottom:0;"><label>إلى تاريخ</label><input id="subPeriodEnd" type="date"></div>
+      </div>
+      <div id="subPeriodHijriFields" style="display:none;">
+        <label style="font-size:11px;color:var(--gray);">من</label>
+        <div class="row2" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px;">
+          <select id="subPeriodStartHDay"></select><select id="subPeriodStartHMonth"></select><select id="subPeriodStartHYear"></select>
+        </div>
+        <label style="font-size:11px;color:var(--gray);">إلى</label>
+        <div class="row2" style="grid-template-columns:repeat(3,1fr);">
+          <select id="subPeriodEndHDay"></select><select id="subPeriodEndHMonth"></select><select id="subPeriodEndHYear"></select>
+        </div>
+      </div>
     </div>
-    <div class="field"><label>جدول المذاكرة (اختياري)</label><input id="subStudySchedule" placeholder="مثال: الأحد والثلاثاء 8-10م"></div>
     <div id="subFirstStationSection">
       <h4 style="font-size:13px;margin:16px 0 8px;">أول محطة (Chapter) 🖥</h4>
       <div class="field"><label>اسم المحطة</label><input id="subFirstStation" value="Chapter 1"></div>
@@ -642,12 +666,36 @@ input,textarea,select{font-family:inherit;}
       <div class="field"><label>من الساعة</label><input id="sesStart" type="time" value="08:00"></div>
       <div class="field"><label>إلى الساعة</label><input id="sesEnd" type="time" value="09:00"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);background:var(--paper);border-radius:9px;padding:10px 12px;margin-bottom:14px;">
+      <input type="checkbox" id="sesRemote"> 💻 هذه المحاضرة عن بُعد
+    </label>
     <div class="field"><label>ملاحظة خاصة بهذه المحاضرة (القاعة / الأستاذ)</label><input id="sesNote"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-close="modalAddSession">إلغاء</button>
       <button class="btn btn-primary" id="saveSessionBtn">حفظ</button>
     </div>
     <button class="btn btn-ghost" id="deleteSessionBtn" style="width:100%;margin-top:8px;display:none;color:var(--red);">🗑 حذف هذه المحاضرة</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalAddStudyBlock">
+  <div class="modal">
+    <h3>إضافة وقت مذاكرة 📚</h3>
+    <div class="field"><label>المادة</label><select id="studySubject"></select></div>
+    <div class="field"><label>اليوم</label>
+      <select id="studyDay">
+        <option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option>
+        <option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option><option value="6">السبت</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="field"><label>من الساعة</label><input id="studyStart" type="time" value="18:00"></div>
+      <div class="field"><label>إلى الساعة</label><input id="studyEnd" type="time" value="19:00"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-close="modalAddStudyBlock">إلغاء</button>
+      <button class="btn btn-primary" id="saveStudyBlockBtn">حفظ</button>
+    </div>
   </div>
 </div>
 
@@ -783,7 +831,7 @@ const DEFAULT_EVENTS=[
 ];
 function defaultState(){
   return {
-    subjects:[], weeklyLog:{}, dayNotes:{}, timetable:[], gpaCourses:[], gpaPreviousTerms:[],
+    subjects:[], weeklyLog:{}, dayNotes:{}, timetable:[], studySchedule:{}, gpaCourses:[], gpaPreviousTerms:[],
     customEvents: JSON.parse(JSON.stringify(DEFAULT_EVENTS)), todos:[], exams:[], darkMode:false, timeFormat:'24', dateSystem:'gregorian', fontFamily:'Tajawal'
   };
 }
@@ -875,9 +923,25 @@ document.querySelectorAll('#subTypeToggle button').forEach(b=>{
 });
 
 let editingSubjectIdx = null;
+let subPeriodDateType = 'gregorian';
+populateHijriSelects(document.getElementById('subPeriodStartHDay'), document.getElementById('subPeriodStartHMonth'), document.getElementById('subPeriodStartHYear'));
+populateHijriSelects(document.getElementById('subPeriodEndHDay'), document.getElementById('subPeriodEndHMonth'), document.getElementById('subPeriodEndHYear'));
 document.getElementById('subHasPeriod').addEventListener('change', e=>{
-  document.getElementById('subPeriodFields').style.display = e.target.checked ? 'grid' : 'none';
+  document.getElementById('subPeriodFields').style.display = e.target.checked ? 'block' : 'none';
 });
+document.querySelectorAll('#subPeriodDateType button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    subPeriodDateType = b.dataset.t;
+    document.querySelectorAll('#subPeriodDateType button').forEach(x=>{
+      x.classList.toggle('on', x===b);
+      x.style.background = x===b ? 'var(--green-deep)' : 'var(--paper)';
+      x.style.color = x===b ? '#fff' : 'var(--ink-soft)';
+    });
+    document.getElementById('subPeriodGregFields').style.display = subPeriodDateType==='gregorian' ? 'grid':'none';
+    document.getElementById('subPeriodHijriFields').style.display = subPeriodDateType==='hijri' ? 'block':'none';
+  });
+});
+const studyDayNames=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 document.getElementById('openAddSubject').addEventListener('click', ()=>{
   editingSubjectIdx = null;
   document.getElementById('subjectModalTitle').textContent = 'مادة جديدة 🎯';
@@ -891,7 +955,14 @@ document.getElementById('openAddSubject').addEventListener('click', ()=>{
   document.getElementById('subPeriodFields').style.display = 'none';
   document.getElementById('subPeriodStart').value = '';
   document.getElementById('subPeriodEnd').value = '';
-  document.getElementById('subStudySchedule').value = '';
+  subPeriodDateType='gregorian';
+  document.querySelectorAll('#subPeriodDateType button').forEach(x=>{
+    x.classList.toggle('on', x.dataset.t==='gregorian');
+    x.style.background = x.dataset.t==='gregorian' ? 'var(--green-deep)' : 'var(--paper)';
+    x.style.color = x.dataset.t==='gregorian' ? '#fff' : 'var(--ink-soft)';
+  });
+  document.getElementById('subPeriodGregFields').style.display = 'grid';
+  document.getElementById('subPeriodHijriFields').style.display = 'none';
   document.getElementById('subFirstStation').value='Chapter 1'; document.getElementById('subFirstPages').value='';
   document.getElementById('subFirstMinutes').value='';
   subjectType='نظري';
@@ -914,10 +985,17 @@ function openEditSubject(idx){
   document.getElementById('subInstructor').value = s.instructor || '';
   document.getElementById('subRemote').checked = !!s.isRemote;
   document.getElementById('subHasPeriod').checked = !!s.period;
-  document.getElementById('subPeriodFields').style.display = s.period ? 'grid' : 'none';
+  document.getElementById('subPeriodFields').style.display = s.period ? 'block' : 'none';
   document.getElementById('subPeriodStart').value = s.period ? `${s.period.start.y}-${String(s.period.start.m).padStart(2,'0')}-${String(s.period.start.d).padStart(2,'0')}` : '';
   document.getElementById('subPeriodEnd').value = s.period ? `${s.period.end.y}-${String(s.period.end.m).padStart(2,'0')}-${String(s.period.end.d).padStart(2,'0')}` : '';
-  document.getElementById('subStudySchedule').value = s.studySchedule || '';
+  subPeriodDateType='gregorian';
+  document.querySelectorAll('#subPeriodDateType button').forEach(x=>{
+    x.classList.toggle('on', x.dataset.t==='gregorian');
+    x.style.background = x.dataset.t==='gregorian' ? 'var(--green-deep)' : 'var(--paper)';
+    x.style.color = x.dataset.t==='gregorian' ? '#fff' : 'var(--ink-soft)';
+  });
+  document.getElementById('subPeriodGregFields').style.display = 'grid';
+  document.getElementById('subPeriodHijriFields').style.display = 'none';
   subjectType = s.type || 'نظري';
   document.querySelectorAll('#subTypeToggle button').forEach(x=>{
     x.classList.toggle('on', x.dataset.v===subjectType);
@@ -929,10 +1007,17 @@ function openEditSubject(idx){
 }
 function readPeriodFromForm(){
   if(!document.getElementById('subHasPeriod').checked) return null;
-  const sv = document.getElementById('subPeriodStart').value, ev = document.getElementById('subPeriodEnd').value;
-  if(!sv || !ev) return null;
-  const [sy,sm,sd] = sv.split('-').map(Number), [ey,em,ed] = ev.split('-').map(Number);
-  return {start:{y:sy,m:sm,d:sd}, end:{y:ey,m:em,d:ed}};
+  if(subPeriodDateType==='gregorian'){
+    const sv = document.getElementById('subPeriodStart').value, ev = document.getElementById('subPeriodEnd').value;
+    if(!sv || !ev) return null;
+    const [sy,sm,sd] = sv.split('-').map(Number), [ey,em,ed] = ev.split('-').map(Number);
+    return {start:{y:sy,m:sm,d:sd}, end:{y:ey,m:em,d:ed}};
+  }
+  const shd=+document.getElementById('subPeriodStartHDay').value, shm=+document.getElementById('subPeriodStartHMonth').value, shy=+document.getElementById('subPeriodStartHYear').value;
+  const ehd=+document.getElementById('subPeriodEndHDay').value, ehm=+document.getElementById('subPeriodEndHMonth').value, ehy=+document.getElementById('subPeriodEndHYear').value;
+  if(!shd||!shm||!shy||!ehd||!ehm||!ehy) return null;
+  const sg = hijriToGregorian(shy,shm,shd), eg = hijriToGregorian(ehy,ehm,ehd);
+  return {start:{y:sg.year,m:sg.month,d:sg.day}, end:{y:eg.year,m:eg.month,d:eg.day}};
 }
 document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
   const name=document.getElementById('subName').value.trim();
@@ -948,7 +1033,6 @@ document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
     s.instructor = document.getElementById('subInstructor').value.trim() || null;
     s.isRemote = document.getElementById('subRemote').checked;
     s.period = readPeriodFromForm();
-    s.studySchedule = document.getElementById('subStudySchedule').value.trim() || null;
     saveState();
     closeModal('modalAddSubject'); renderAll();
     return;
@@ -961,7 +1045,6 @@ document.getElementById('saveSubjectBtn').addEventListener('click', ()=>{
     instructor: document.getElementById('subInstructor').value.trim() || null,
     isRemote: document.getElementById('subRemote').checked,
     period: readPeriodFromForm(),
-    studySchedule: document.getElementById('subStudySchedule').value.trim() || null,
     stations: [{
       id: uid(), name: firstStName,
       pages: +document.getElementById('subFirstPages').value || 0,
@@ -1023,7 +1106,7 @@ function renderSubjectDetail(){
         <div><div style="font-weight:800;font-size:16px;">${subject.name}${subject.isRemote?' <span style="font-size:11px;background:var(--blue);color:#fff;border-radius:20px;padding:2px 8px;">💻 عن بُعد</span>':''}</div>
         <div style="font-size:12px;color:var(--gray);">${subject.type||''}${subject.hours?' • '+subject.hours+' ساعة':''}${subject.instructor?' • 👨‍🏫 '+subject.instructor:''}</div>
         ${periodStr?`<div style="font-size:11.5px;color:var(--gray);margin-top:2px;">🗓 ${periodStr}</div>`:''}
-        ${subject.studySchedule?`<div style="font-size:11.5px;color:var(--gray);margin-top:2px;">📚 ${subject.studySchedule}</div>`:''}</div>
+        </div>
       </div>
       <button class="btn btn-ghost btn-sm" id="editThisSubjectBtn">✏️</button>
     </div>
@@ -1445,57 +1528,162 @@ document.getElementById('saveLogBtn').addEventListener('click', ()=>{
 
 /* ================= Timetable ================= */
 const ttDays=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+const studyDaysFull=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const ttHours=[]; for(let h=7;h<=22;h++) ttHours.push(h);
 function populateSubjectSelect(id){
   const sel=document.getElementById(id);
   sel.innerHTML = state.subjects.map(s=>`<option value="${s.id}">${s.emoji} ${s.name}</option>`).join('') || '<option value="">لا توجد مواد</option>';
 }
+let ttMode = 'lectures';
+let ttSelectedWeek = null;
+function populateTtWeekSelect(){
+  const sel = document.getElementById('ttWeekSelect');
+  const cur = ttSelectedWeek || (getCurrentWeekIndex()>=0 ? getCurrentWeekIndex()+1 : 1);
+  sel.innerHTML = weeks.map(w=>`<option value="${w.num}">الأسبوع ${weekOrdinal[w.num-1]}</option>`).join('');
+  sel.value = cur;
+  ttSelectedWeek = cur;
+}
 function renderTimetable(){
   const grid = document.getElementById('ttGrid');
-  let html = `<div class="tt-head"></div>` + ttDays.map(d=>`<div class="tt-head">${d}</div>`).join('');
+  const days = ttMode==='lectures' ? ttDays : studyDaysFull;
+  let html = `<div class="tt-head"></div>` + days.map(d=>`<div class="tt-head">${d}</div>`).join('');
   ttHours.forEach(h=>{
     html += `<div class="tt-hour">${String(h+1).padStart(2,'0')}:00 - ${String(h).padStart(2,'0')}:00</div>`;
-    for(let day=0; day<5; day++){
+    for(let day=0; day<days.length; day++){
       const shade = day%2===1 ? 'background:var(--paper);' : '';
       html += `<div class="tt-cell" data-day="${day}" data-hour="${h}" style="${shade}"></div>`;
     }
   });
+  grid.style.gridTemplateColumns = `56px repeat(${days.length},1fr)`;
   grid.style.gridTemplateRows = `34px repeat(${ttHours.length},34px)`;
+  grid.style.minWidth = (56 + days.length*90) + 'px';
   grid.innerHTML = html;
-  // place sessions
-  state.timetable.forEach(sess=>{
-    const subject = state.subjects.find(s=>s.id===sess.subjectId);
-    const [sh,sm] = sess.start.split(':').map(Number);
-    const [eh,em] = sess.end.split(':').map(Number);
-    const startRow = ttHours.indexOf(sh)+2;
+  const old = document.getElementById('ttStudyEmpty'); if(old) old.remove();
+
+  if(ttMode==='lectures'){
+    document.getElementById('ttSectionTitle').textContent = '📘 الجدول الدراسي';
+    document.getElementById('openAddSession').style.display = 'inline-flex';
+    document.getElementById('ttStudyControls').style.display = 'none';
+    state.timetable.forEach(sess=>{
+      const subject = state.subjects.find(s=>s.id===sess.subjectId);
+      const [sh,sm] = sess.start.split(':').map(Number);
+      const [eh,em] = sess.end.split(':').map(Number);
+      const durationHours = (eh+em/60) - (sh+sm/60);
+      const cell = grid.querySelector(`.tt-cell[data-day="${sess.day}"][data-hour="${sh}"]`);
+      if(cell){
+        const div = document.createElement('div');
+        div.className='tt-session';
+        div.style.background = subject?subject.color:'#8b9591';
+        div.style.height = (durationHours*34-2)+'px';
+        div.innerHTML = `${sess.type==='نظري'?'📖':'🧪'}${sess.isRemote?' 💻':''} ${subject?subject.name:''}<br>${fmtTime(sess.start)}-${fmtTime(sess.end)}${sess.note?'<br>'+sess.note:''}`;
+        div.dataset.del = sess.id;
+        cell.style.position='relative';
+        cell.appendChild(div);
+      }
+    });
+    grid.querySelectorAll('.tt-session').forEach(s=> s.addEventListener('click', ()=> openEditSession(s.dataset.del)));
+    grid.querySelectorAll('.tt-cell').forEach(c=> c.addEventListener('click', (e)=>{
+      if(e.target!==c) return;
+      editingSessionId = null;
+      document.getElementById('sessionModalTitle').textContent = 'إضافة محاضرة';
+      document.getElementById('saveSessionBtn').textContent = 'حفظ';
+      document.getElementById('deleteSessionBtn').style.display = 'none';
+      populateSubjectSelect('sesSubject');
+      document.getElementById('sesNote').value = '';
+      document.getElementById('sesRemote').checked = false;
+      document.getElementById('sesDay').value = c.dataset.day;
+      document.getElementById('sesStart').value = String(c.dataset.hour).padStart(2,'0')+':00';
+      document.getElementById('sesEnd').value = String(+c.dataset.hour+1).padStart(2,'0')+':00';
+      openModal('modalAddSession');
+    }));
+    return;
+  }
+
+  // Study schedule mode (week-specific)
+  document.getElementById('ttSectionTitle').textContent = '📚 جدول المذاكرة';
+  document.getElementById('openAddSession').style.display = 'none';
+  document.getElementById('ttStudyControls').style.display = 'flex';
+  if(!document.getElementById('ttWeekSelect').options.length) populateTtWeekSelect();
+  const weekNum = ttSelectedWeek || 1;
+  const blocks = (state.studySchedule[weekNum]||[]).map(b=>({...b, subject: state.subjects.find(s=>s.id===b.subjectId)})).filter(b=>b.subject);
+  blocks.forEach(b=>{
+    const [sh,sm] = b.start.split(':').map(Number);
+    const [eh,em] = b.end.split(':').map(Number);
     const durationHours = (eh+em/60) - (sh+sm/60);
-    const cell = grid.querySelector(`.tt-cell[data-day="${sess.day}"][data-hour="${sh}"]`);
+    const cell = grid.querySelector(`.tt-cell[data-day="${b.day}"][data-hour="${sh}"]`);
     if(cell){
       const div = document.createElement('div');
       div.className='tt-session';
-      div.style.background = subject?subject.color:'#8b9591';
+      div.style.background = b.subject.color;
       div.style.height = (durationHours*34-2)+'px';
-      div.innerHTML = `${sess.type==='نظري'?'📖':'🧪'} ${subject?subject.name:''}<br>${fmtTime(sess.start)}-${fmtTime(sess.end)}${sess.note?'<br>'+sess.note:''}`;
-      div.dataset.del = sess.id;
+      div.innerHTML = `📚 ${b.subject.emoji} ${b.subject.name}<br>${fmtTime(b.start)}-${fmtTime(b.end)}`;
+      div.dataset.blockid = b.id;
       cell.style.position='relative';
       cell.appendChild(div);
     }
   });
-  grid.querySelectorAll('.tt-session').forEach(s=> s.addEventListener('click', ()=> openEditSession(s.dataset.del)));
-  grid.querySelectorAll('.tt-cell').forEach(c=> c.addEventListener('click', (e)=>{
-    if(e.target!==c) return;
-    editingSessionId = null;
-    document.getElementById('sessionModalTitle').textContent = 'إضافة محاضرة';
-    document.getElementById('saveSessionBtn').textContent = 'حفظ';
-    document.getElementById('deleteSessionBtn').style.display = 'none';
-    populateSubjectSelect('sesSubject');
-    document.getElementById('sesNote').value = '';
-    document.getElementById('sesDay').value = c.dataset.day;
-    document.getElementById('sesStart').value = String(c.dataset.hour).padStart(2,'0')+':00';
-    document.getElementById('sesEnd').value = String(+c.dataset.hour+1).padStart(2,'0')+':00';
-    openModal('modalAddSession');
+  grid.querySelectorAll('.tt-session').forEach(s=> s.addEventListener('click', ()=>{
+    if(confirm('حذف وقت المذاكرة هذا؟')){
+      state.studySchedule[weekNum] = (state.studySchedule[weekNum]||[]).filter(b=>b.id!==s.dataset.blockid);
+      saveState(); renderTimetable();
+    }
   }));
+  if(!blocks.length){
+    grid.insertAdjacentHTML('afterend', '<div id="ttStudyEmpty" style="font-size:12px;color:var(--gray);margin-top:10px;">لا توجد أوقات مذاكرة لهذا الأسبوع — أضفها أو كرّر جدول أسبوع سابق.</div>');
+  }
 }
+document.getElementById('ttViewLectures').addEventListener('click', ()=>{
+  ttMode='lectures';
+  document.getElementById('ttViewLectures').classList.add('btn-primary');
+  document.getElementById('ttViewStudy').classList.remove('btn-primary');
+  renderTimetable();
+});
+document.getElementById('ttViewStudy').addEventListener('click', ()=>{
+  ttMode='study';
+  document.getElementById('ttViewStudy').classList.add('btn-primary');
+  document.getElementById('ttViewLectures').classList.remove('btn-primary');
+  populateTtWeekSelect();
+  renderTimetable();
+});
+document.getElementById('ttWeekSelect').addEventListener('change', e=>{
+  ttSelectedWeek = +e.target.value;
+  renderTimetable();
+});
+document.getElementById('openAddStudyBlock').addEventListener('click', ()=>{
+  populateSubjectSelect('studySubject');
+  document.getElementById('studyDay').value = '0';
+  document.getElementById('studyStart').value = '18:00';
+  document.getElementById('studyEnd').value = '19:00';
+  openModal('modalAddStudyBlock');
+});
+document.getElementById('saveStudyBlockBtn').addEventListener('click', ()=>{
+  const subjectId = document.getElementById('studySubject').value;
+  if(!subjectId){ alert('أضف مادة أولاً'); return; }
+  const weekNum = ttSelectedWeek || 1;
+  if(!state.studySchedule[weekNum]) state.studySchedule[weekNum] = [];
+  state.studySchedule[weekNum].push({
+    id: uid(), subjectId,
+    day: +document.getElementById('studyDay').value,
+    start: document.getElementById('studyStart').value,
+    end: document.getElementById('studyEnd').value
+  });
+  saveState();
+  closeModal('modalAddStudyBlock');
+  renderTimetable();
+});
+document.getElementById('repeatPrevWeekBtn').addEventListener('click', ()=>{
+  const weekNum = ttSelectedWeek || 1;
+  const otherWeeks = weeks.filter(w=> w.num!==weekNum && (state.studySchedule[w.num]||[]).length);
+  if(!otherWeeks.length){ alert('لا يوجد أسبوع آخر فيه جدول مذاكرة لتكراره'); return; }
+  const list = otherWeeks.map(w=>`${w.num} - الأسبوع ${weekOrdinal[w.num-1]}`).join('\n');
+  const chosen = prompt(`اكتب رقم الأسبوع الذي تريد تكرار جدوله:\n${list}`);
+  const srcNum = +chosen;
+  if(!srcNum || !state.studySchedule[srcNum]){ return; }
+  if((state.studySchedule[weekNum]||[]).length && !confirm('سيتم استبدال جدول هذا الأسبوع الحالي بجدول الأسبوع المختار. متابعة؟')) return;
+  state.studySchedule[weekNum] = state.studySchedule[srcNum].map(b=>({...b, id:uid()}));
+  saveState();
+  renderTimetable();
+});
 let editingSessionId = null;
 function openEditSession(id){
   const sess = state.timetable.find(t=>t.id===id);
@@ -1511,6 +1699,7 @@ function openEditSession(id){
   document.getElementById('sesStart').value = sess.start;
   document.getElementById('sesEnd').value = sess.end;
   document.getElementById('sesNote').value = sess.note || '';
+  document.getElementById('sesRemote').checked = !!sess.isRemote;
   openModal('modalAddSession');
 }
 document.getElementById('deleteSessionBtn').addEventListener('click', ()=>{
@@ -1526,6 +1715,7 @@ document.getElementById('openAddSession').addEventListener('click', ()=>{
   document.getElementById('saveSessionBtn').textContent = 'حفظ';
   document.getElementById('deleteSessionBtn').style.display = 'none';
   document.getElementById('sesNote').value = '';
+  document.getElementById('sesRemote').checked = false;
   populateSubjectSelect('sesSubject');
   openModal('modalAddSession');
 });
@@ -1535,6 +1725,7 @@ document.getElementById('saveSessionBtn').addEventListener('click', ()=>{
   const sessData = {
     subjectId, type:document.getElementById('sesType').value,
     day:+document.getElementById('sesDay').value,
+    isRemote:document.getElementById('sesRemote').checked,
     start:document.getElementById('sesStart').value, end:document.getElementById('sesEnd').value,
     note:document.getElementById('sesNote').value.trim()
   };
