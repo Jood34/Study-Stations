@@ -628,6 +628,9 @@ input,textarea,select{font-family:inherit;}
         <option value="أخرى">أخرى</option>
       </select>
     </div>
+    <div class="field" id="evtSubjectField"><label>ربطها بمادة (اختياري)</label>
+      <select id="evtSubject"><option value="">بدون ربط</option></select>
+    </div>
     <div class="field"><label>التاريخ</label><input id="evtDate" type="date"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-close="modalAddEvent">إلغاء</button>
@@ -656,8 +659,9 @@ input,textarea,select{font-family:inherit;}
   <div class="modal">
     <h3 id="sessionModalTitle">إضافة محاضرة</h3>
     <div class="field"><label>المادة</label><select id="sesSubject"></select></div>
-    <div class="field"><label>نوع الحصة</label>
-      <select id="sesType"><option value="نظري">📖 نظري</option><option value="عملي">🧪 عملي</option></select>
+    <div class="field"><label>نوع الحصة (مرتبط بنوع المادة)</label>
+      <div id="sesTypeDisplay" style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;background:var(--paper);color:var(--ink);font-weight:700;"></div>
+      <input type="hidden" id="sesType" value="نظري">
     </div>
     <div class="field"><label>اليوم</label>
       <select id="sesDay"><option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option><option value="3">الأربعاء</option><option value="4">الخميس</option></select>
@@ -1594,6 +1598,7 @@ function renderTimetable(){
       document.getElementById('sesDay').value = c.dataset.day;
       document.getElementById('sesStart').value = String(c.dataset.hour).padStart(2,'0')+':00';
       document.getElementById('sesEnd').value = String(+c.dataset.hour+1).padStart(2,'0')+':00';
+      syncSesType();
       openModal('modalAddSession');
     }));
     return;
@@ -1685,6 +1690,13 @@ document.getElementById('repeatPrevWeekBtn').addEventListener('click', ()=>{
   renderTimetable();
 });
 let editingSessionId = null;
+function syncSesType(){
+  const subject = state.subjects.find(s=>s.id===document.getElementById('sesSubject').value);
+  const type = subject ? (subject.type||'نظري') : 'نظري';
+  document.getElementById('sesType').value = type;
+  document.getElementById('sesTypeDisplay').textContent = type==='عملي' ? '🧪 عملي' : '📖 نظري';
+}
+document.getElementById('sesSubject').addEventListener('change', syncSesType);
 function openEditSession(id){
   const sess = state.timetable.find(t=>t.id===id);
   if(!sess) return;
@@ -1694,12 +1706,12 @@ function openEditSession(id){
   document.getElementById('deleteSessionBtn').style.display = 'block';
   populateSubjectSelect('sesSubject');
   document.getElementById('sesSubject').value = sess.subjectId;
-  document.getElementById('sesType').value = sess.type;
   document.getElementById('sesDay').value = sess.day;
   document.getElementById('sesStart').value = sess.start;
   document.getElementById('sesEnd').value = sess.end;
   document.getElementById('sesNote').value = sess.note || '';
   document.getElementById('sesRemote').checked = !!sess.isRemote;
+  syncSesType();
   openModal('modalAddSession');
 }
 document.getElementById('deleteSessionBtn').addEventListener('click', ()=>{
@@ -1717,6 +1729,7 @@ document.getElementById('openAddSession').addEventListener('click', ()=>{
   document.getElementById('sesNote').value = '';
   document.getElementById('sesRemote').checked = false;
   populateSubjectSelect('sesSubject');
+  syncSesType();
   openModal('modalAddSession');
 });
 document.getElementById('saveSessionBtn').addEventListener('click', ()=>{
@@ -1741,11 +1754,12 @@ document.getElementById('saveSessionBtn').addEventListener('click', ()=>{
 /* ================= Calendar & Events ================= */
 function allCalendarEvents(){
   const out=[];
-  state.customEvents.forEach(e=> out.push({title:e.title, category:e.category, date:e.date, endDate:e.endDate||null}));
+  state.customEvents.forEach(e=> out.push({title:e.title, category:e.category, date:e.date, endDate:e.endDate||null, subjectId:e.subjectId||null}));
   state.subjects.forEach(subject=> subject.stations.forEach(st=> st.reviews.forEach(r=>{
-    if(!r.done) out.push({title:`مراجعة: ${subject.name} - ${st.name}`, category:'مهام', date:r.dueDate, endDate:null});
+    if(!r.done) out.push({title:`مراجعة: ${subject.name} - ${st.name}`, category:'مهام', date:r.dueDate, endDate:null, subjectId:subject.id});
   })));
-  state.todos.forEach(t=>{ if(t.toCalendar && t.dueDate) out.push({title:t.text, category:'مهام', date:t.dueDate, endDate:null}); });
+  state.todos.forEach(t=>{ if(t.toCalendar && t.dueDate) out.push({title:t.text, category:'مهام', date:t.dueDate, endDate:null, subjectId:t.subjectId||null}); });
+  state.exams.forEach(ex=> out.push({title:`اختبار: ${ex.examTitle}`, category:'اختبارات', date:ex.examDate, endDate:null, subjectId:ex.subjectId||null}));
   return out;
 }
 function eventCoversDate(e, y, m, d){
@@ -1800,20 +1814,38 @@ function showDayEventsPopup(y,m,d,dayEvts){
   document.getElementById('dayEventsTitle').textContent = `${fmtDateAny(y,m,d)}`;
   document.getElementById('dayEventsList').innerHTML = dayEvts.map(e=>{
     const dateStr = e.endDate ? `${fmtDateAny(e.date.y,e.date.m,e.date.d)} ← ${fmtDateAny(e.endDate.y,e.endDate.m,e.endDate.d)}` : fmtDateAny(e.date.y,e.date.m,e.date.d);
+    const st = eventStatusText(e);
+    const subject = e.subjectId ? state.subjects.find(s=>s.id===e.subjectId) : null;
     return `<div class="review-row"><span class="tag" style="background:${catStyle[e.category].c}22;color:${catStyle[e.category].c};">${catStyle[e.category].icon} ${e.category}</span>
-      <div style="flex:1;"><div style="font-weight:700;font-size:12.5px;">${e.title}</div>
-      <div style="font-size:11px;color:var(--gray);">${dateStr}</div></div>
+      <div style="flex:1;"><div style="font-weight:700;font-size:12.5px;">${e.title}${subject?` <span style="font-weight:400;color:var(--gray);font-size:11px;">(${subject.emoji} ${subject.name})</span>`:''}</div>
+      <div style="font-size:11px;color:var(--gray);">${dateStr}</div>
+      <div style="font-size:11px;color:${st.color};font-weight:700;">${st.text}</div></div>
     </div>`;
   }).join('');
   openModal('modalDayEvents');
+}
+function eventStatusText(e){
+  const s = toDate(e.date.y,e.date.m,e.date.d);
+  const end = e.endDate ? toDate(e.endDate.y,e.endDate.m,e.endDate.d) : s;
+  if(end < today){
+    const daysAgo = Math.round((today-end)/86400000);
+    return {text: daysAgo===0 ? 'انتهى اليوم' : `انتهى منذ ${daysAgo} ${daysAgo===1?'يوم':'أيام'}`, color:'var(--gray)'};
+  } else if(s <= today && today <= end){
+    return {text:'جارٍ الآن', color:'var(--green-deep)'};
+  }
+  const daysLeft = Math.ceil((s-today)/86400000);
+  return {text:`متبقي ${daysLeft} ${daysLeft===1?'يوم':'أيام'}`, color:'var(--gold)'};
 }
 function renderCalendarList(){
   const evts = allCalendarEvents().filter(e=> !activeCatFilter || e.category===activeCatFilter).map(e=>({...e, jd: toDate(e.date.y,e.date.m,e.date.d)})).sort((a,b)=>a.jd-b.jd);
   document.getElementById('calListView').innerHTML = evts.length ? evts.map(e=>{
     const dateStr = e.endDate ? `${fmtDateAny(e.date.y,e.date.m,e.date.d)} ← ${fmtDateAny(e.endDate.y,e.endDate.m,e.endDate.d)}` : fmtDateAny(e.date.y,e.date.m,e.date.d);
+    const st = eventStatusText(e);
+    const subject = e.subjectId ? state.subjects.find(s=>s.id===e.subjectId) : null;
     return `<div class="review-row"><span class="tag" style="background:${catStyle[e.category].c}22;color:${catStyle[e.category].c};">${catStyle[e.category].icon} ${e.category}</span>
-      <div style="flex:1;"><div style="font-weight:700;font-size:12.5px;">${e.title}</div>
-      <div style="font-size:11px;color:var(--gray);">${dateStr}</div></div>
+      <div style="flex:1;"><div style="font-weight:700;font-size:12.5px;">${e.title}${subject?` <span style="font-weight:400;color:var(--gray);font-size:11px;">(${subject.emoji} ${subject.name})</span>`:''}</div>
+      <div style="font-size:11px;color:var(--gray);">${dateStr}</div>
+      <div style="font-size:11px;color:${st.color};font-weight:700;">${st.text}</div></div>
     </div>`;
   }).join('') : '<div class="empty-state"><div class="ic">📅</div><p>لا توجد أحداث</p></div>';
 }
@@ -1823,6 +1855,9 @@ document.getElementById('calViewMonth').addEventListener('click', ()=>{ calMode=
 document.getElementById('calViewList').addEventListener('click', ()=>{ calMode='list'; document.getElementById('calMonthView').style.display='none'; document.getElementById('calListView').style.display='block'; renderCalendarList(); });
 document.getElementById('openAddEvent').addEventListener('click', ()=>{
   document.getElementById('evtTitle').value=''; document.getElementById('evtDate').value='';
+  populateSubjectSelect('evtSubject');
+  document.getElementById('evtSubject').insertAdjacentHTML('afterbegin','<option value="">بدون ربط</option>');
+  document.getElementById('evtSubject').value='';
   openModal('modalAddEvent');
 });
 document.getElementById('saveEventBtn').addEventListener('click', ()=>{
@@ -1830,7 +1865,7 @@ document.getElementById('saveEventBtn').addEventListener('click', ()=>{
   const val = document.getElementById('evtDate').value;
   if(!title || !val){ alert('أدخل العنوان والتاريخ'); return; }
   const [y,m,d] = val.split('-').map(Number);
-  state.customEvents.push({title, category:document.getElementById('evtCategory').value, date:{y,m,d}});
+  state.customEvents.push({title, category:document.getElementById('evtCategory').value, date:{y,m,d}, subjectId: document.getElementById('evtSubject').value || null});
   saveState(); closeModal('modalAddEvent'); renderAll();
 });
 
@@ -2364,7 +2399,8 @@ function renderHome(){
   }).sort((a,b)=>a.jd-b.jd).slice(0,5);
   document.getElementById('homeEvents').innerHTML = evts.length ? evts.map(e=>{
     const dateStr = e.endDate ? `${fmtDateAny(e.date.y,e.date.m,e.date.d)} ← ${fmtDateAny(e.endDate.y,e.endDate.m,e.endDate.d)}` : fmtDateAny(e.date.y,e.date.m,e.date.d);
-    return `<div class="log-row">${catStyle[e.category].icon} ${e.title} — ${dateStr}</div>`;
+    const st = eventStatusText(e);
+    return `<div class="log-row">${catStyle[e.category].icon} ${e.title} — ${dateStr} <span style="color:${st.color};font-weight:700;">(${st.text})</span></div>`;
   }).join('') : '<div style="font-size:12px;color:var(--gray);">لا توجد أحداث قادمة</div>';
 
   const catCounts={}; allCalendarEvents().forEach(e=> catCounts[e.category]=(catCounts[e.category]||0)+1);
