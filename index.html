@@ -636,6 +636,7 @@ input,textarea,select{font-family:inherit;}
       <button class="btn btn-ghost" data-close="modalAddEvent">إلغاء</button>
       <button class="btn btn-primary" id="saveEventBtn">حفظ</button>
     </div>
+    <button class="btn btn-ghost" id="deleteEventBtn" style="width:100%;margin-top:8px;display:none;color:var(--red);">🗑 حذف هذا الحدث</button>
   </div>
 </div>
 
@@ -828,10 +829,10 @@ const defaultStationTasks=["قراءة السلايدات","فهم المحتو�
 const gradeScale={"A+":5.00,"A":4.75,"B+":4.50,"B":4.00,"C+":3.50,"C":3.00,"D+":2.50,"D":2.00,"F":0.00};
 
 const DEFAULT_EVENTS=[
-  {title:"بداية العام الدراسي", category:"مناسبات", date:{y:2026,m:8,d:23}, endDate:null},
-  {title:"إجازة اليوم الوطني", category:"إجازات", date:{y:2026,m:9,d:23}, endDate:{y:2026,m:9,d:26}},
-  {title:"إجازة الخريف", category:"إجازات", date:{y:2026,m:11,d:20}, endDate:{y:2026,m:11,d:28}},
-  {title:"إجازة منتصف العام الدراسي", category:"إجازات", date:{y:2027,m:1,d:8}, endDate:{y:2027,m:1,d:16}},
+  {id:'default-1', title:"بداية العام الدراسي", category:"مناسبات", date:{y:2026,m:8,d:23}, endDate:null},
+  {id:'default-2', title:"إجازة اليوم الوطني", category:"إجازات", date:{y:2026,m:9,d:23}, endDate:{y:2026,m:9,d:26}},
+  {id:'default-3', title:"إجازة الخريف", category:"إجازات", date:{y:2026,m:11,d:20}, endDate:{y:2026,m:11,d:28}},
+  {id:'default-4', title:"إجازة منتصف العام الدراسي", category:"إجازات", date:{y:2027,m:1,d:8}, endDate:{y:2027,m:1,d:16}},
 ];
 function defaultState(){
   return {
@@ -1754,12 +1755,12 @@ document.getElementById('saveSessionBtn').addEventListener('click', ()=>{
 /* ================= Calendar & Events ================= */
 function allCalendarEvents(){
   const out=[];
-  state.customEvents.forEach(e=> out.push({title:e.title, category:e.category, date:e.date, endDate:e.endDate||null, subjectId:e.subjectId||null}));
+  state.customEvents.forEach(e=> out.push({id:e.id, title:e.title, category:e.category, date:e.date, endDate:e.endDate||null, subjectId:e.subjectId||null, origin:'custom'}));
   state.subjects.forEach(subject=> subject.stations.forEach(st=> st.reviews.forEach(r=>{
-    if(!r.done) out.push({title:`مراجعة: ${subject.name} - ${st.name}`, category:'مهام', date:r.dueDate, endDate:null, subjectId:subject.id});
+    if(!r.done) out.push({title:`مراجعة: ${subject.name} - ${st.name}`, category:'مهام', date:r.dueDate, endDate:null, subjectId:subject.id, origin:'review'});
   })));
-  state.todos.forEach(t=>{ if(t.toCalendar && t.dueDate) out.push({title:t.text, category:'مهام', date:t.dueDate, endDate:null, subjectId:t.subjectId||null}); });
-  state.exams.forEach(ex=> out.push({title:`اختبار: ${ex.examTitle}`, category:'اختبارات', date:ex.examDate, endDate:null, subjectId:ex.subjectId||null}));
+  state.todos.forEach(t=>{ if(t.toCalendar && t.dueDate) out.push({title:t.text, category:'مهام', date:t.dueDate, endDate:null, subjectId:t.subjectId||null, origin:'task'}); });
+  state.exams.forEach(ex=> out.push({title:`اختبار: ${ex.examTitle}`, category:'اختبارات', date:ex.examDate, endDate:null, subjectId:ex.subjectId||null, origin:'exam'}));
   return out;
 }
 function eventCoversDate(e, y, m, d){
@@ -1820,8 +1821,10 @@ function showDayEventsPopup(y,m,d,dayEvts){
       <div style="flex:1;"><div style="font-weight:700;font-size:12.5px;">${e.title}${subject?` <span style="font-weight:400;color:var(--gray);font-size:11px;">(${subject.emoji} ${subject.name})</span>`:''}</div>
       <div style="font-size:11px;color:var(--gray);">${dateStr}</div>
       <div style="font-size:11px;color:${st.color};font-weight:700;">${st.text}</div></div>
+      ${e.origin==='custom'?`<button class="btn btn-ghost btn-sm" data-editevtday="${e.id}">✏️</button>`:''}
     </div>`;
   }).join('');
+  document.querySelectorAll('#dayEventsList [data-editevtday]').forEach(b=> b.addEventListener('click', ()=>{ closeModal('modalDayEvents'); openEditEvent(b.dataset.editevtday); }));
   openModal('modalDayEvents');
 }
 function eventStatusText(e){
@@ -1842,30 +1845,68 @@ function renderCalendarList(){
     const dateStr = e.endDate ? `${fmtDateAny(e.date.y,e.date.m,e.date.d)} ← ${fmtDateAny(e.endDate.y,e.endDate.m,e.endDate.d)}` : fmtDateAny(e.date.y,e.date.m,e.date.d);
     const st = eventStatusText(e);
     const subject = e.subjectId ? state.subjects.find(s=>s.id===e.subjectId) : null;
+    const originNote = {review:'من المراجعات', task:'من المهام', exam:'من الاختبارات'}[e.origin];
     return `<div class="review-row"><span class="tag" style="background:${catStyle[e.category].c}22;color:${catStyle[e.category].c};">${catStyle[e.category].icon} ${e.category}</span>
       <div style="flex:1;"><div style="font-weight:700;font-size:12.5px;">${e.title}${subject?` <span style="font-weight:400;color:var(--gray);font-size:11px;">(${subject.emoji} ${subject.name})</span>`:''}</div>
       <div style="font-size:11px;color:var(--gray);">${dateStr}</div>
-      <div style="font-size:11px;color:${st.color};font-weight:700;">${st.text}</div></div>
+      <div style="font-size:11px;color:${st.color};font-weight:700;">${st.text}</div>
+      ${originNote?`<div style="font-size:10.5px;color:var(--gray);margin-top:2px;">🔗 ${originNote}</div>`:''}</div>
+      ${e.origin==='custom'?`<button class="btn btn-ghost btn-sm" data-editevt="${e.id}">✏️</button>`:''}
     </div>`;
   }).join('') : '<div class="empty-state"><div class="ic">📅</div><p>لا توجد أحداث</p></div>';
+  document.querySelectorAll('#calListView [data-editevt]').forEach(b=> b.addEventListener('click', ()=> openEditEvent(b.dataset.editevt)));
 }
 document.getElementById('prevMonth').addEventListener('click', ()=>{ calMonth--; if(calMonth<1){calMonth=12;calYear--;} renderCalendarMonth(); });
 document.getElementById('nextMonth').addEventListener('click', ()=>{ calMonth++; if(calMonth>12){calMonth=1;calYear++;} renderCalendarMonth(); });
 document.getElementById('calViewMonth').addEventListener('click', ()=>{ calMode='month'; document.getElementById('calMonthView').style.display='block'; document.getElementById('calListView').style.display='none'; renderCalendarMonth(); });
 document.getElementById('calViewList').addEventListener('click', ()=>{ calMode='list'; document.getElementById('calMonthView').style.display='none'; document.getElementById('calListView').style.display='block'; renderCalendarList(); });
+let editingEventId = null;
 document.getElementById('openAddEvent').addEventListener('click', ()=>{
+  editingEventId = null;
+  document.getElementById('eventModalTitle').textContent = 'إضافة حدث';
+  document.getElementById('saveEventBtn').textContent = 'حفظ';
+  document.getElementById('deleteEventBtn').style.display = 'none';
   document.getElementById('evtTitle').value=''; document.getElementById('evtDate').value='';
   populateSubjectSelect('evtSubject');
   document.getElementById('evtSubject').insertAdjacentHTML('afterbegin','<option value="">بدون ربط</option>');
   document.getElementById('evtSubject').value='';
+  document.getElementById('evtCategory').value='مناسبات';
   openModal('modalAddEvent');
+});
+function openEditEvent(id){
+  const e = state.customEvents.find(ev=>ev.id===id);
+  if(!e) return;
+  editingEventId = id;
+  document.getElementById('eventModalTitle').textContent = 'تعديل الحدث';
+  document.getElementById('saveEventBtn').textContent = 'حفظ التعديلات';
+  document.getElementById('deleteEventBtn').style.display = 'block';
+  document.getElementById('evtTitle').value = e.title;
+  document.getElementById('evtCategory').value = e.category;
+  populateSubjectSelect('evtSubject');
+  document.getElementById('evtSubject').insertAdjacentHTML('afterbegin','<option value="">بدون ربط</option>');
+  document.getElementById('evtSubject').value = e.subjectId || '';
+  document.getElementById('evtDate').value = `${e.date.y}-${String(e.date.m).padStart(2,'0')}-${String(e.date.d).padStart(2,'0')}`;
+  openModal('modalAddEvent');
+}
+document.getElementById('deleteEventBtn').addEventListener('click', ()=>{
+  if(!editingEventId) return;
+  if(confirm('حذف هذا الحدث؟')){
+    state.customEvents = state.customEvents.filter(ev=>ev.id!==editingEventId);
+    saveState(); closeModal('modalAddEvent'); renderAll();
+  }
 });
 document.getElementById('saveEventBtn').addEventListener('click', ()=>{
   const title = document.getElementById('evtTitle').value.trim();
   const val = document.getElementById('evtDate').value;
   if(!title || !val){ alert('أدخل العنوان والتاريخ'); return; }
   const [y,m,d] = val.split('-').map(Number);
-  state.customEvents.push({title, category:document.getElementById('evtCategory').value, date:{y,m,d}, subjectId: document.getElementById('evtSubject').value || null});
+  const data = {title, category:document.getElementById('evtCategory').value, date:{y,m,d}, subjectId: document.getElementById('evtSubject').value || null};
+  if(editingEventId){
+    const idx = state.customEvents.findIndex(ev=>ev.id===editingEventId);
+    if(idx>-1) state.customEvents[idx] = {...state.customEvents[idx], ...data};
+  } else {
+    state.customEvents.push({id: uid(), ...data});
+  }
   saveState(); closeModal('modalAddEvent'); renderAll();
 });
 
